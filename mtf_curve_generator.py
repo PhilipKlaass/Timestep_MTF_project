@@ -1,4 +1,2 @@
-import numpy as np
-import matplotlib.pyplot as plt
-
-mtf_curve = np.sin
+m = range(10)
+print(m)
