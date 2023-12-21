@@ -3,26 +3,28 @@ import matplotlib as plt
 
 #array that will hold our simulated pixel values
 
-x= 9
-y = 10
-roi = np.zeros((x,y))
-
-
+row= 15
+column = 15
+roi = np.zeros((row,column))
 
 #angle that the edge is tilted w.r.t. to vertical
-theta = [5]
+theta = [16]
 
 
 #number of pixels for a repition
 height_of_pattern = (np.tan(theta))**(-1)
 
+# x-postion which the edge starts on the top of the roi
+edge_start = 15
 
-for row in range(1,x+1):
+for y in range(0,row):
     
-    for column in range(1, y+1):
-        if column< 5 or column < 5-column/height_of_pattern:
-            np.put(roi,[row,column], 12)
-        if column >5 or column> 5 -column/height_of_pattern:
-            np.put(roi,[row,column],1)
-        print(roi[row][column])
+    for x in range(0, column):
+        if x < edge_start or x < edge_start-y/height_of_pattern:
+            roi[y,x] = 1
+        if x>edge_start or x > edge_start-y/height_of_pattern:
+            roi[y,x]  = 12
+
 print(roi)
+
+
