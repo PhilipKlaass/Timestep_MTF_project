@@ -97,7 +97,7 @@ def main():
     object_edge = make_object_plane(10,10000,10000)
     img = Image.fromarray(object_edge)
     img.show()
-    image_edge = make_image_plane(object_edge,1000)
+    image_edge = make_image_plane(object_edge,100)
     img2 = Image.fromarray(image_edge)
     img2.show()
     print(image_edge)
