@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random as rand
 from PIL import Image
-
+from scipy import integrate
+from scipy.integrate import dblquad
 
 
 ''''
@@ -69,38 +70,33 @@ def make_image_plane(object_plane, size):
             image_plane[x][y] = value/((len(object_plane)/size)**2)
     return image_plane
             
+def make_point_spread(edge):
+    edge_size = int(len(edge))
+    random_scaling_factor = rand.randint(1,10)*0.01
+    point_spread_edge = np.zeros((edge_size,edge_size))
+    psf = lambda x: np.exp((-((x)**2)**(0.5))/random_scaling_factor)
+    total_intensity = integrate.quad(psf,-np.inf,np.inf)
+    for x in range(0,edge_size):
+        for y in range(int(edge_size*0.35),int(edge_size*0.65)):
+            for x1 in range(-6,6):   
+                if x+x1<100 and x+x1>0:
+                    dist_x = x-x1
+                    intensity_for_current_pixel= integrate.quad(psf, -.2+dist_x*0.4, 0.2+dist_x*0.4)
+                    intensity_percentage = intensity_for_current_pixel[0]/total_intensity[0]
+                    point_spread_edge[x+x1][y+y1]+= intensity_percentage*edge[x][y]
+    print(random_scaling_factor)
+    return point_spread_edge
 
 
 
-'''
-plot mtf curve
-generate array of x-values
-find xvalue where mtf(x) is zero 
-yaxis == mtf(x)
-and plot
-
-def mtf_plt(step):
-    zero = 10
-    x_axis = []
-    y_axis = []
-    x=0
-    while x < zero:
-        x_axis.append(x)
-        y_axis.append(simulated_MTF(x))
-        x+=step
-    plt.scatter(x_axis,y_axis)
-    plt.show()
-
-'''
 
 def main():
-    object_edge = make_object_plane(10,10000,10000)
+    object_edge = make_object_plane(10,100,100)
     img = Image.fromarray(object_edge)
     img.show()
-    image_edge = make_image_plane(object_edge,100)
+    image_edge = make_point_spread(object_edge)
     img2 = Image.fromarray(image_edge)
     img2.show()
-    print(image_edge)
     return
 
 main()
