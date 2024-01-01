@@ -11,9 +11,9 @@ from scipy.integrate import dblquad
 #edge_size = int(len(edge))
 random_scaling_factor = rand.randint(1,10)*0.01
 #point_spread_edge = np.zeros(edge_size,edge_size)
-psf = lambda y,x: np.exp((-((x)**2+y**2)**(0.5))/random_scaling_factor)
-origin = integrate.dblquad(psf,-.2,0.2,-.2,.2)
-total_intensity = integrate.dblquad(psf,-np.inf,np.inf,-np.inf,np.inf)
+psf = lambda y: np.exp((-(y**2)**(0.5))/random_scaling_factor)
+origin = integrate.quad(psf,-.2,0.2)
+total_intensity = integrate.quad(psf,-np.inf,np.inf)
 print(origin)
 print(total_intensity)
 print(origin[0]/total_intensity[0])
