@@ -4,8 +4,30 @@ import random as rand
 from PIL import Image
 from scipy import integrate
 from scipy.integrate import dblquad
+'''
+lsf = lambda x: np.exp((-((x)**2)**(0.5))/0.25)
+out = []
+i = 0 
+while i < 100:
+    out.append(lsf(x=i))
+    i +=0.1
+print(np.fft.fft(out))
+'''
+
+lsf = lambda x: np.exp((-((x)**2)**(0.5))/0.25)
+print(lsf(x=4))
 
 
+
+
+
+
+
+
+
+
+
+"""
 #edge = np.ones((100,100))
 
 #edge_size = int(len(edge))
@@ -49,3 +71,4 @@ def make_point_spread(edge):
                         point_spread_edge[x+x1][y+y1]+= intensity_percentage*edge[x][y]
     print(random_scaling_factor)
     return point_spread_edge
+"""

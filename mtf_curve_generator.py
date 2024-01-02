@@ -4,6 +4,8 @@ from PIL import Image
 from scipy import integrate
 from scipy.integrate import dblquad
 from matplotlib import pyplot as plt
+from scipy.fft import fft, fftfreq
+
 
 ''''
 loop to iterate over roi; rows first then columns.
@@ -48,34 +50,65 @@ def make_image_plane(object_plane, size):
                     value =value + object_plane[n+x*int(len(object_plane)/size)][m+y*int(len(object_plane)/size)]
             image_plane[x][y] = value/((len(object_plane)/size)**2)
     return image_plane
-            
-def make_point_spread(edge,dark):
-    edge_size = int(len(edge))
-    random_scaling_factor = 0.25 #rand.randint(1,10)*0.01
-    point_spread_edge = np.zeros((edge_size,edge_size))
-    psf = lambda x: np.exp((-((x)**2)**(0.5))/random_scaling_factor)
-    total_intensity = integrate.quad(psf,-np.inf,np.inf)
-    for x in range(0,edge_size):
-        for y in range(0,edge_size):
+
+
+def make_line_spread(edge):
+    edge_size_x = int(len(edge))
+    edge_size_y = int(len(edge[0]))
+    random_scaling_factor = rand.randint(10,40)*0.01
+    point_spread_edge = np.zeros((edge_size_x,edge_size_y))
+    lsf = lambda z: np.exp((-((z)**2)**(0.5))/random_scaling_factor+ np.abs(z)/(np.abs(z)+10000))
+    total_intensity = integrate.quad(lsf,-np.inf,np.inf)
+    for x in range(0,edge_size_x):
+        for y in range(0,edge_size_y):
             x1=0     
-            while x1 <edge_size:   
-                dist_x = x1-y
-                if -1<y+dist_x<edge_size:
-                    intensity_for_current_pixel= integrate.quad(psf, -.1+dist_x*0.2, 0.1+dist_x*0.2)
-                    intensity_percentage = intensity_for_current_pixel[0]/total_intensity[0]
-                    new_intensity = intensity_percentage*edge[x][y]
-                    point_spread_edge[x][y+dist_x] += new_intensity
-                x1+= 1
+            while x1 <edge_size_y:
+                #if y<int(0.3*edge_size_y) or y>int(0.7*edge_size_y):
+                #    point_spread_edge[x][y] = edge[x][y]
+                #else:
+                    dist_x = x1-y
+                    if -1<y+dist_x<edge_size_y:
+                        intensity_for_current_pixel= integrate.quad(lsf, -.1+dist_x*0.2, 0.1+dist_x*0.2)
+                        intensity_percentage = intensity_for_current_pixel[0]/total_intensity[0]
+                        new_intensity = intensity_percentage*edge[x][y]
+                        point_spread_edge[x][y+dist_x] += new_intensity
+                #x1+= 1
+                    x1+=1
     print(random_scaling_factor)
+    make_mtf(lsf)
     return point_spread_edge
+
+def add_poisson(edge,density):
+    edge_size_x = int(len(edge))
+    edge_size_y = int(len(edge[0]))
+    poisson_noise= np.random.poisson(density,(edge_size_x,edge_size_y))
+    return edge+0.5*poisson_noise
+
+
+
+def make_mtf(lsf):
+    # Number of sample points
+    N = 600
+    # sample spacing
+    T = 1.0 / 800.0
+    x = np.linspace(0.0, N*T, N, endpoint=False)
+    y = lsf(z=x)
+    yf = fft(y)
+    xf = fftfreq(N, T)[:N//2]
+    plt.plot(xf, 2.0/N * np.abs(yf[0:N//2]))
+    plt.grid()
+    plt.show()
+
 
 
 
 
 def main():
-    object_edge = make_object_plane(10,100,100,50,200)
-    image_edge = make_point_spread(object_edge,100)
-    plt.imshow(image_edge, interpolation='nearest')
+    object_edge = make_object_plane(5,1000,1000,20,200)
+    image = make_image_plane(object_edge,100)
+    image_with_lsf = make_line_spread(image)
+    noisy_image = add_poisson(image_with_lsf,0.3)
+    plt.imshow(noisy_image, interpolation='nearest')
     plt.show()
 
 main()
