@@ -1,6 +1,5 @@
 import numpy as np
 import random as rand
-from PIL import Image
 from scipy import integrate
 from scipy.integrate import dblquad
 from matplotlib import pyplot as plt
@@ -57,7 +56,7 @@ def make_line_spread(edge):
     edge_size_y = int(len(edge[0]))
     random_scaling_factor = rand.randint(10,40)*0.01
     point_spread_edge = np.zeros((edge_size_x,edge_size_y))
-    lsf = lambda z: np.exp((-((z)**2)**(0.5))/random_scaling_factor+ np.abs(z)/(np.abs(z)+10000))
+    lsf = lambda z: np.exp((-((z)**2)**(0.5))/random_scaling_factor)#+ np.abs(z)/(np.abs(z)+10000)) tried changing the lsf but messed up the mtf
     total_intensity = integrate.quad(lsf,-np.inf,np.inf)
     for x in range(0,edge_size_x):
         for y in range(0,edge_size_y):
@@ -75,22 +74,21 @@ def make_line_spread(edge):
                 #x1+= 1
                     x1+=1
     print(random_scaling_factor)
-    make_mtf(lsf)
-    return point_spread_edge
+    return (point_spread_edge,lsf)
 
 def add_poisson(edge,density):
     edge_size_x = int(len(edge))
     edge_size_y = int(len(edge[0]))
     poisson_noise= np.random.poisson(density,(edge_size_x,edge_size_y))
-    return edge+0.5*poisson_noise
+    return edge+poisson_noise
 
 
 
 def make_mtf(lsf):
     # Number of sample points
-    N = 600
+    N = 100000
     # sample spacing
-    T = 1.0 / 800.0
+    T = 2.0 / 800.0
     x = np.linspace(0.0, N*T, N, endpoint=False)
     y = lsf(z=x)
     yf = fft(y)
@@ -106,9 +104,9 @@ def make_mtf(lsf):
 def main():
     object_edge = make_object_plane(5,1000,1000,20,200)
     image = make_image_plane(object_edge,100)
-    image_with_lsf = make_line_spread(image)
+    image_with_lsf,lsf = make_line_spread(image)
     noisy_image = add_poisson(image_with_lsf,0.3)
     plt.imshow(noisy_image, interpolation='nearest')
     plt.show()
-
+    make_mtf(lsf)
 main()
