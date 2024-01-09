@@ -4,7 +4,7 @@ from scipy import integrate
 from scipy.integrate import dblquad
 from matplotlib import pyplot as plt
 from scipy.fft import fft, fftfreq
-
+from scipy.special import gamma
 
 ''''
 loop to iterate over roi; rows first then columns.
@@ -14,7 +14,7 @@ the edge start minus the height of patern then the index value is set to
 columns greater than are the pixels not coveered and have values set too 12.
 
 
-!!change once ESF is made!!
+
 '''
 def make_object_plane(theta, roi_height, roi_width,dark,bright):
     #size of the Region of Interest or ROI/roi
@@ -54,9 +54,15 @@ def make_image_plane(object_plane, size):
 def make_line_spread(edge):
     edge_size_x = int(len(edge))
     edge_size_y = int(len(edge[0]))
-    random_scaling_factor = rand.randint(10,40)*0.01
+    #random_scaling_factor 
+    K = rand.randint(1,5)
     point_spread_edge = np.zeros((edge_size_x,edge_size_y))
-    lsf = lambda z: np.exp((-((z)**2)**(0.5))/random_scaling_factor)#+ np.abs(z)/(np.abs(z)+10000)) tried changing the lsf but messed up the mtf
+    lsf = lambda z: ((K**4)/(K**4-1))*(np.exp(-np.abs(z)*K)+np.exp(-np.abs(z)*K**2)+np.exp(-np.abs(z)*K**3)+np.exp(-np.abs(z)*K**4))
+
+
+    #
+    #lsf = lambda z: (gamma((random_scaling_factor+1)/random_scaling_factor)+gamma((random_scaling_factor+2)/(random_scaling_factor+1))**(-1))*(np.exp(-(np.abs(z)**random_scaling_factor))+np.exp(-(np.abs(z)**(random_scaling_factor+1))))
+
     total_intensity = integrate.quad(lsf,-np.inf,np.inf)
     for x in range(0,edge_size_x):
         for y in range(0,edge_size_y):
@@ -73,7 +79,7 @@ def make_line_spread(edge):
                         point_spread_edge[x][y+dist_x] += new_intensity
                 #x1+= 1
                     x1+=1
-    print(random_scaling_factor)
+    print(K)
     return (point_spread_edge,lsf)
 
 def add_poisson(edge,density):
@@ -86,9 +92,9 @@ def add_poisson(edge,density):
 
 def make_mtf(lsf):
     # Number of sample points
-    N = 100000
+    N = 1000
     # sample spacing
-    T = 2.0 / 800.0
+    T = 0.4
     x = np.linspace(0.0, N*T, N, endpoint=False)
     y = lsf(z=x)
     yf = fft(y)
@@ -108,11 +114,10 @@ def save_as_csv(array):
 
 def main():
     object_edge = make_object_plane(5,1000,1000,20,200)
-    save_as_csv(object_edge)
-    #image = make_image_plane(object_edge,100)
-    #image_with_lsf,lsf = make_line_spread(image)
-    #noisy_image = add_poisson(image_with_lsf,0.3)
-    #plt.imshow(noisy_image, interpolation='nearest')
-    #plt.show()
-    #make_mtf(lsf)
+    image = make_image_plane(object_edge,100)
+    image_with_lsf,lsf = make_line_spread(image)
+    noisy_image = add_poisson(image_with_lsf,0.3)
+    plt.imshow(noisy_image, interpolation='nearest')
+    plt.show()
+    make_mtf(lsf)
 main()

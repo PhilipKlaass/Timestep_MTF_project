@@ -1,9 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import random as rand
-from PIL import Image
 from scipy import integrate
 from scipy.integrate import dblquad
+from matplotlib import pyplot as plt
+from scipy.fft import rfft, rfftfreq
+from scipy.special import gamma
+
 '''
 lsf = lambda x: np.exp((-((x)**2)**(0.5))/0.25)
 out = []
@@ -13,10 +15,21 @@ while i < 100:
     i +=0.1
 print(np.fft.fft(out))
 '''
+K = 4
+lsf = lambda z: ((K**4)/(K**4-1))*(np.exp(-np.abs(z)*K)+np.exp(-np.abs(z)*K**2)+np.exp(-np.abs(z)*K**3)+np.exp(-np.abs(z)*K**4))
 
-lsf = lambda x: np.exp((-((x)**2)**(0.5))/0.25)
-print(lsf(x=4))
 
+# Number of sample points
+N = 1000
+# sample spacing or pixel size
+T = 0.4
+x = np.linspace(0.0, N*T, N, endpoint=False)
+y = lsf(z=x)
+yf = rfft(y)
+xf = rfftfreq(N, T)[:N//2]
+plt.plot(xf, 2.0/N * np.abs(yf[0:N//2]))
+plt.grid()
+plt.show()
 
 
 
