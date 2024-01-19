@@ -55,7 +55,7 @@ def make_line_spread(edge):
     edge_size_x = int(len(edge))
     edge_size_y = int(len(edge[0]))
     #random_scaling_factor 
-    K = rand.randint(1,5)
+    K = rand.randint(2,5)
     point_spread_edge = np.zeros((edge_size_x,edge_size_y))
     lsf = lambda z: ((K**4)/(K**4-1))*(np.exp(-np.abs(z)*K)+np.exp(-np.abs(z)*K**2)+np.exp(-np.abs(z)*K**3)+np.exp(-np.abs(z)*K**4))
 
