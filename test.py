@@ -2,6 +2,7 @@ import numpy as np
 import random as rand
 from scipy import integrate
 from scipy.integrate import dblquad
+<<<<<<< Updated upstream
 from matplotlib import pyplot as plt
 from scipy.fft import rfft, rfftfreq
 from scipy.special import gamma
@@ -27,6 +28,20 @@ x = np.linspace(0.0, N*T, N, endpoint=False)
 y = lsf(z=x)
 yf = rfft(y)
 xf = rfftfreq(N, T)[:N//2]
+=======
+from scipy.fft import rfft, fftfreq
+
+lsf = lambda z: (1/(0.5))*np.exp((-((z)**2)**(0.5))/0.25)#+ np.abs(z)/(np.abs(z)+10000)) tried changing the lsf but messed up the mtf
+
+# Number of sample points
+N = 100000
+# sample spacing
+T = 2.0 / 800.0
+x = np.linspace(0.0, N*T, N, endpoint=False)
+y = lsf(z=x)
+yf = rfft(y)
+xf = [A:[for A in range(200)]]
+>>>>>>> Stashed changes
 plt.plot(xf, 2.0/N * np.abs(yf[0:N//2]))
 plt.grid()
 plt.show()

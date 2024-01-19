@@ -3,8 +3,7 @@ import random as rand
 from scipy import integrate
 from scipy.integrate import dblquad
 from matplotlib import pyplot as plt
-from scipy.fft import fft, fftfreq
-from scipy.special import gamma
+from scipy.fft import rfft, fftfreq
 
 ''''
 loop to iterate over roi; rows first then columns.
@@ -57,12 +56,7 @@ def make_line_spread(edge):
     #random_scaling_factor 
     K = rand.randint(2,5)
     point_spread_edge = np.zeros((edge_size_x,edge_size_y))
-    lsf = lambda z: ((K**4)/(K**4-1))*(np.exp(-np.abs(z)*K)+np.exp(-np.abs(z)*K**2)+np.exp(-np.abs(z)*K**3)+np.exp(-np.abs(z)*K**4))
-
-
-    #
-    #lsf = lambda z: (gamma((random_scaling_factor+1)/random_scaling_factor)+gamma((random_scaling_factor+2)/(random_scaling_factor+1))**(-1))*(np.exp(-(np.abs(z)**random_scaling_factor))+np.exp(-(np.abs(z)**(random_scaling_factor+1))))
-
+    lsf = lambda z: (1/(2*random_scaling_factor))*np.exp((-((z)**2)**(0.5))/random_scaling_factor)#+ np.abs(z)/(np.abs(z)+10000)) tried changing the lsf but messed up the mtf
     total_intensity = integrate.quad(lsf,-np.inf,np.inf)
     for x in range(0,edge_size_x):
         for y in range(0,edge_size_y):
@@ -79,7 +73,8 @@ def make_line_spread(edge):
                         point_spread_edge[x][y+dist_x] += new_intensity
                 #x1+= 1
                     x1+=1
-    print(K)
+    print(random_scaling_factor)
+    make_mtf(lsf)
     return (point_spread_edge,lsf)
 
 def add_poisson(edge,density):
@@ -97,7 +92,7 @@ def make_mtf(lsf):
     T = 0.4
     x = np.linspace(0.0, N*T, N, endpoint=False)
     y = lsf(z=x)
-    yf = fft(y)
+    yf = rfft(y)
     xf = fftfreq(N, T)[:N//2]
     plt.plot(xf, 2.0/N * np.abs(yf[0:N//2]))
     plt.grid()
@@ -114,10 +109,11 @@ def save_as_csv(array):
 
 def main():
     object_edge = make_object_plane(5,1000,1000,20,200)
+    #save_as_csv(object_edge)
     image = make_image_plane(object_edge,100)
     image_with_lsf,lsf = make_line_spread(image)
     noisy_image = add_poisson(image_with_lsf,0.3)
     plt.imshow(noisy_image, interpolation='nearest')
     plt.show()
-    make_mtf(lsf)
+    #make_mtf(lsf)
 main()
