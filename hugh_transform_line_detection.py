@@ -41,7 +41,7 @@ def find_line(point_coords):
         while len(possible_lines)<100:
             for element in point_coords:
                 r_max = (element[0]**2 + element[1]**2)**0.5
-                possible_lines.append((random.randint(1,100)*0.01*r_max,random.randint(-90,0)))
+                possible_lines.append((random.randint(1,100)*0.01*r_max,random.randint(-9000,0)*0.01))
         for i in possible_lines:
             weight = 0 
             for j in point_coords:
@@ -51,15 +51,12 @@ def find_line(point_coords):
                 r_prime = x*np.cos(theta)+y*np.sin(theta)
                 if r_prime>0.90*i[0] and r_prime<1.1*i[1]:
                     weight += 1
-            if weight<25:
+            if weight<5:
                 possible_lines.remove(i)
-
-
-
         h+=1
     return possible_lines
 
-def display_accumulator_space(list, point_coords):
+def display_accumulator_space(list):
     x =[]
     y =[]
     for i in list:
