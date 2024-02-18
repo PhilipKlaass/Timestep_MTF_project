@@ -23,18 +23,13 @@ def get_array(filename, size):
     return array
 
 def detect_edge_points(array, threshold):
-    size_i = len(array)-1
-    size_j = len(array[0])-1
-    dark_value = array[0][0]
-    light_value = array[0][len(array[0])-1]
-    if dark_value>light_value:
-        (dark_value,light_value) = (light_value,dark_value)
-    average_value = (dark_value+light_value)/2
-    output_image = np.zeros((size_i,size_i), np.int8)
-    for i in range(0,size_i):
-        for j in range(0,size_j):
-            if (1-threshold)*average_value<array[i][j] and array[i][j]< (1+threshold)*average_value:
-                output_image[i][j]= 1
+    m = len(array[0])
+    light_value = array[0][m-1]
+    output_image = np.zeros((len(array),len(array[0])))
+    for j in range(len(array)):
+        for i in range(m-1,0,-1):
+            if (0.5-threshold)*light_value <=  array[j][i]<= (0.5+threshold)*light_value:
+                output_image[j][i] =1
 
 
 
@@ -45,8 +40,8 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("csv.txt",100)
-    array  = detect_edge_points(array1, threshold =0.5)
+    array1 =get_array("razor0001.csv",100)
+    array  = detect_edge_points(array1, threshold =0.25)
 
 
 
