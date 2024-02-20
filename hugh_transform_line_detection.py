@@ -74,10 +74,12 @@ def main():
     ax[3].set_ylim((array.shape[0], 0))
     ax[3].set_axis_off()
     ax[3].set_title('Detected lines')
-
+    lines = []
     for _, angle, dist in zip(*hough_line_peaks(h, theta, d)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ax[3].axline((x0, y0), slope=np.tan(angle + np.pi/2))
+        lines.append((_,angle,dist))
+    print(lines)
     plt.tight_layout()
     plt.show()
 
