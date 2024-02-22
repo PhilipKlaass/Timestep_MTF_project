@@ -23,18 +23,13 @@ def get_array(filename, size):
     return array
 
 def detect_edge_points(array, threshold):
-    size_i = len(array)-1
-    size_j = len(array[0])-1
-    dark_value = array[0][0]
-    light_value = array[0][len(array[0])-1]
-    if dark_value>light_value:
-        (dark_value,light_value) = (light_value,dark_value)
-    average_value = (dark_value+light_value)/2
-    output_image = np.zeros((size_i,size_i), np.int8)
-    for i in range(0,size_i):
-        for j in range(0,size_j):
-            if (1-threshold)*average_value<array[i][j] and array[i][j]< (1+threshold)*average_value:
-                output_image[i][j]= 1
+    m = len(array[0])
+    light_value = array[0][m-1]
+    output_image = np.zeros((len(array),len(array[0])))
+    for j in range(len(array)):
+        for i in range(m-1,0,-1):
+            if (0.5-threshold)*light_value <=  array[j][i]<= (0.5+threshold)*light_value:
+                output_image[j][i] =1
 
 
 
@@ -45,8 +40,8 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("csv.txt",100)
-    array  = detect_edge_points(array1, threshold =0.5)
+    array1 =get_array("razor0001.csv",100)
+    array  = detect_edge_points(array1, threshold =0.25)
 
 
 
@@ -79,15 +74,12 @@ def main():
     ax[3].set_ylim((array.shape[0], 0))
     ax[3].set_axis_off()
     ax[3].set_title('Detected lines')
-    m = 1
-    b =1
+    lines = []
     for _, angle, dist in zip(*hough_line_peaks(h, theta, d)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ax[3].axline((x0, y0), slope=np.tan(angle + np.pi/2))
-        m =np.tan(angle + np.pi/2)
-        b = y0-m*x0
-    print(m)
-    print(b)
+        lines.append((_,angle,dist))
+    print(lines)
     plt.tight_layout()
     plt.show()
 
