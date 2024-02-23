@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 def get_array(filename, size):
-    f = open(str(filename), "r")
+    f = open(filename, "r")
     array = np.ones((size,size))
     m =0
     for line in f:
