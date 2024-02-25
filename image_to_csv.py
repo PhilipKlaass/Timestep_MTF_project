@@ -5,10 +5,10 @@ import numpy as np
 def open_image(filename):
     img = ski.io.imread(filename)
     print(img)
-    img_1 =img[615:715]
+    img_1 =img[350:550]
     img_roi = np.transpose(img_1)
-    img_roi = img_roi[600:700]
-    return img_roi
+    img_roi = img_roi[900:1100]
+    return img
 
 def save_as_csv(array,csv_filename):
     f = open(csv_filename,'a')
@@ -24,6 +24,6 @@ def main():
     roi = open_image("razor0001.bmp")
     plt.imshow(roi,interpolation='nearest')
     plt.show()
-    save_as_csv(roi, "razor0002.csv")
+    #save_as_csv(roi, "image0001.csv")
 main()
 

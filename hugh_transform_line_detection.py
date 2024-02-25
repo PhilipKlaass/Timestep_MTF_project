@@ -40,7 +40,7 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("razor0001.csv",100)
+    array1 =get_array("image0001.csv",200)
     array  = detect_edge_points(array1, threshold =0.25)
 
 
@@ -75,7 +75,7 @@ def main():
     ax[3].set_axis_off()
     ax[3].set_title('Detected lines')
     lines = []
-    for _, angle, dist in zip(*hough_line_peaks(h, theta, d)):
+    for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = 200)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ax[3].axline((x0, y0), slope=np.tan(angle + np.pi/2))
         lines.append((_,angle,dist))
