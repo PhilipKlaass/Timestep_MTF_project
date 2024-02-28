@@ -4,6 +4,7 @@ import numpy as np
 from math import floor
 from scipy.optimize import curve_fit
 import scipy
+import scienceplots
 
 def get_array(filename, size):
     f = open(str(filename), "r")
@@ -24,8 +25,8 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
                    #is easier when we consider our edge in the 1st quadrant
     x_intercept = r/np.cos(theta) - len(array)*0.5*np.tan(theta)
     esf = []
-    for y_edge in range(len(array)):
-        y_edge += 0.5
+    for y_edge in range(0,5*len(array)):
+        y_edge = y_edge/5 + 0.5 #change for spacing of perp lines, aka nbr of data points
         x_edge = -y_edge*np.tan(theta)+r/np.cos(theta)
         for i in range(sample_number):
             x_sample1 = x_intercept + i/sampling_frequency 
@@ -87,28 +88,28 @@ def main():
     
     averaged_esf = average_esf(sorted(esf))
     X_avg,Y_avg = make_scatter(averaged_esf)
-
-    fig,ax = plt.subplots(1,2, figsize = (10,6))
+    plt.style.use(["science", "notebook", "grid"])
+    fig , ax = plt.subplots(1,2, figsize = (10,3.5))
     ax[0].plot(X,Y,".", ms= 1.5)
-    ax[0].set_xlabel("Distance")
-    ax[0].set_ylabel("Intensity")
+    #ax[0].set_xlabel("Distance")
+    ax[0].set_ylabel("Pixel Intensity Values")
     ax[0].set_title("Oversampled ESF")
     ax[1].plot(X_avg,Y_avg,".", ms= 1.5)
-    ax[1].set_xlabel("Distance")
-    ax[1].set_ylabel("Intensity")
+    #ax[1].set_xlabel("Distance")
     ax[1].set_title("Oversampled and Averaged ESF")
 
     X_interp = np.linspace(-15,15,200)
     Y_interp = scipy.interpolate.pchip_interpolate(X_avg, Y_avg, X_interp)
-    ax[1].plot(X_interp,Y_interp,'-', color = 'r', label= "pchip Interpolation")
-    ax[1].legend()
-    #popt, pcov = curve_fit(esf_function, X,Y, p0=[10,10,10,120,0])
-    #a_opt,b_opt,c_opt,D_opt, x0_opt = popt
-    #x_model = np.linspace(min(X), max(X), len(X))
-    #y_model = esf_function(x_model,a_opt,b_opt,c_opt,D_opt,x0_opt)
-    #ax[1].plot(x_model,y_model, color= "r")
-
+    ax[1].plot(X_interp,Y_interp,'-', color = 'r', label= "PCHIP Interpolation", lw = 1.5)
+    
+    popt, pcov = curve_fit(esf_function, X,Y, p0=[10,10,10,120,0])
+    a_opt,b_opt,c_opt,D_opt, x0_opt = popt
+    x_model = np.linspace(min(X), max(X), len(X))
+    y_model = esf_function(x_model,a_opt,b_opt,c_opt,D_opt,x0_opt)
+    ax[1].plot(x_model,y_model,"--", color= "green", label = "Cubic curve fit", lw= 1.5)
+    ax[1].legend(loc ="upper left", fontsize = 10)
+    plt.figtext(0.5,0.02, "Distance to Edge [Pixel Pitch]", ha= "center", fontsize = 16 )
     plt.show()
-    #print(popt)
+    print(len(X))
 main()
 #print(esf_function(-15,10,10,10,120,0))
