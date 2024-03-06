@@ -99,8 +99,8 @@ def make_mtf(lsf):
     plt.show()
 
 
-def save_as_csv(array):
-    f = open("edge_image_csv",'a')
+def save_as_csv(array,filename):
+    f = open(filename,'a')
     for element in array:
         for value in element:
             f.write(str(value)+"   ")
@@ -111,9 +111,10 @@ def main():
     object_edge = make_object_plane(5,1000,1000,20,200)
     #save_as_csv(object_edge)
     image = make_image_plane(object_edge,100)
-    image_with_lsf,lsf = make_line_spread(image)
-    noisy_image = add_poisson(image_with_lsf,0.3)
-    plt.imshow(noisy_image, interpolation='nearest')
+    save_as_csv(image, "perfect_lsf.csv")
+    #image_with_lsf,lsf = make_line_spread(image)
+    #noisy_image = add_poisson(image_with_lsf,0.3)
+    plt.imshow(image, interpolation='nearest')
     plt.show()
     #make_mtf(lsf)
 main()
