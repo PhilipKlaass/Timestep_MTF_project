@@ -1,8 +1,6 @@
-import skimage as ski
 import matplotlib.pyplot as plt
 import numpy as np
 from math import floor
-from scipy.optimize import curve_fit
 import scipy
 import scienceplots
 
@@ -65,6 +63,7 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
 
 """
 Summary:
+    Bins data points.
 
 Variable:
     - esf_dist: sorted from min to max
@@ -90,6 +89,57 @@ def esf_bin_smooth(esf_dist,esf_intensity,binsize):
     return binned_esf
 
 
+"""
+Summary: 
+    Averages distances and intensities over a square of some number of pixels given by the window size.
+    The square is centered on a single data point and the new average replaces that data point.
+Variables:
+    - esf_dist: sorted from min to max
+    - esf_intensity: list of values, identical indexes correspond to single
+                    points, aka esf_0 is (x,y) = (esf_dist[0],esf_intensity[0])
+    - window_size: odd integer expected, determines the size of the window over which the data points 
+                   are averaged 
+"""
+def average_filter(esf,window_size):
+    out_dist= []
+    out_intensity = []
+    out = []
+    for i in esf:
+        to_average = []
+        avg_dist = 0
+        avg_inten = 0
+        for j in esf:
+            if i[0]-window_size/2<j[0]<i[0]+window_size/2:
+                to_average.append(j)
+        for k in to_average:
+            avg_dist+=k[0]
+            avg_inten +=k[1]
+        out_dist.append(avg_dist/len(to_average))
+        out_intensity.append(avg_inten/len(to_average))
+        out.append((avg_dist/len(to_average),avg_inten/len(to_average)))
+    return out_dist,out_intensity, out
+
+def median_filter(esf, window_size):
+    out_dist= []
+    out_intensity = []
+    out= []
+    for i in range(floor(window_size/2),len(esf)-floor(window_size/2)):
+        temp = []
+        for j in range(-floor(window_size/2), floor(window_size/2)):
+            temp.append(esf[j+i])
+        temp_dist,temp_inten = make_scatter(temp)
+        median_dist = sorted(temp_dist)[floor(window_size/2)+1]
+        median_inten = sorted(temp_inten)[floor(window_size/2)+1]
+        out_dist.append(median_dist)
+        out_intensity.append(median_inten)
+        out.append((median_dist,median_inten))
+    return out_dist,out_intensity,out
+
+"""
+Summary:
+    Uses a 2-point kernel to approximate the derivative of a 1-D function via convlution.
+    Kernel is (-1,1)
+"""
 def get_derivative(x,y):
     x_out=x
     for i in range(1,len(x)-1):
@@ -138,73 +188,89 @@ def make_scatter(array):
         Y.append(i[1])
     return (X,Y)
 
-"""
-Curve to fit our data, probably wont use
-"""
-def esf_function(x,a,b,c,D,x0):
-
-    #return (x/np.abs(x))*(a*(np.abs(x)-x0)**(1/3)+b*(np.abs(x)-x0)**(1/5)+c*(np.abs(x)-x0)**(1/7))+D
-    return (x/np.abs(x))*(a+b*(np.abs(x)-x0)**(1/5)+c*(np.abs(x)-x0)**(1/7))+D
-
-
-
 
 def main():
-    array = get_array("image0006_corrected_(400,600)-(900,1100).csv", 200)
+    array = get_array("image0006_corrected_(300,700)-(800,1200).csv", 400)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, -0.0479966,40, 0.97,2)
+    esf = get_esf(array, -0.0479966,144,.95,4)
     X,Y =  make_scatter(sorted(esf))
-    binned_esf = esf_bin_smooth(X,Y, 0.15)
+    binned_esf = esf_bin_smooth(X,Y, 0.1)
 
+    X_binned , Y_binned = make_scatter(binned_esf)
+    
+    X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
 
-    X_avg,Y_avg = make_scatter(binned_esf)
-
+    X_median, Y_median, median = median_filter(average,13)
+    
 
     plt.style.use(["science", "notebook", "grid"])
     fig , ax = plt.subplots(2,3, figsize = (12,8))
     ax[0][0].plot(X,Y,".", ms= 2)
-    ax[0][0].set_title("Oversampled")
+    ax[0][0].set_title("Oversampled ESF/ERF")
 
-    ax[0][1].plot(X_avg,Y_avg, ".", ms= 2)
+    ax[0][1].plot(X_avgfilter,Y_avgfilter, "-", ms= 2, color = "g")
+    ax[0][1].plot(X_median,Y_median, "o", ms= 2, color = "red")
+    ax[0][1].plot(X_binned,Y_binned, ".", ms= 2)
     ax[0][1].set_title("Binned into 0.1 pixel width")
 
-    X_interp = np.linspace(-5,5,200)
-    Y_interp = scipy.interpolate.pchip_interpolate(X_avg, Y_avg, X_interp)
+
+    N = 242 #number of samples
+    R = max(X_median)-min(X_median) #range of samples in pixel pitch
+    delta_x = (R)/(N) #spacing of samples in mm, one pixel = 2.2 microns
+    fs = N/R #sampling frequency
+    k = np.linspace(0,N/2,int(N/2)+1)
+
+
+    X_interp = np.linspace(-R/2,R/2,N)
+    Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
     Yhat = scipy.signal.savgol_filter(Y_interp,51,2)
     ax[0][2].plot(X_interp,Y_interp,"--",label= "PCHIP Interpolation", lw= 0.75)
     ax[0][2].set_title("Peicewise Cubic Interpolation")
 
     ax[1][0].plot(X_interp,Yhat,'-', color = 'r',  lw = 1.5)
     ax[1][0].set_title("Savitsky-Golay filter applied")
+
+
     
     dy = np.gradient(Yhat,X_interp)
+    mdy = max(dy)
+    for i in range(len(dy)):
+        dy[i] = dy[i]/mdy
+
     dx2,dy2 = get_derivative(X_interp,Y_interp)
-    ax[1][1].plot(dx2,dy2, ".")
-    ax[1][1].plot(X_interp,dy)
+    mdy2 = max(dy2)
+    for i in range(len(dy2)):
+        dy2[i] = dy2[i]/mdy2
+    ax[1][1].plot(dx2,dy2, ".", color ='green')
+    ax[1][1].plot(X_interp,dy,"b")
     ax[1][1].set_title("Derivative using(np.gradient)")
 
-    xf = scipy.fft.fftfreq(101,0.1)
-    yf = scipy.fft.rfft(dy)
+
+
+    
+    xf = scipy.fft.fftfreq(N,delta_x)*(1/R)*(2.2/0.001)
+    xf2 = k/(N*delta_x)
+    yf2 = scipy.fft.rfft(dy)
+    yf2 = np.abs(yf2)
+    yf = scipy.fft.fft(dy)
     yf = np.abs(yf)
-    yfmax = max(yf)
+    maxyf = max(yf)
+    maxyf2 = max(yf2)
     for i in range(len(yf)):
-        yf[i]= yf[i]/yfmax
-    ax[1][2].plot(xf,yf,'-')
-    ax[1][2].set_title("|FFT| of Gradient")
+        yf[i] = yf[i]/maxyf
+    for i in range(len(yf2)):
+        yf2[i] = yf2[i]/maxyf2
+    ax[1][2].plot(xf2,yf2,'.',color="green")
+    ax[1][2].plot(xf,yf,'-', color = "blue", lw = 0.5)
+    ax[1][2].set_title("|FFT| of LSF")
+    ax[1][2].set_xlim([0,75])
+    ax[1][2].set_ylim([0,1])
+    ax[1][2].set_xlabel("Cycles per mm")
 
-    #f = scipy.interpolate.PchipInterpolator(X_avg,Y_avg)
-    #x_interp2 = np.linspace(-16,16,400)
-    #y_interp2 = f(x_interp2)
-    #ax[1].plot(x_interp2,y_interp2, label = "poly")
+    print(xf)
+    print(delta_x)
+    print(len(X_median))
 
-
-
-    #popt, pcov = curve_fit(esf_function, X,Y, p0=[10,10,10,120,0])
-    #a_opt,b_opt,c_opt,D_opt, x0_opt = popt
-    #x_model = np.linspace(min(X), max(X), len(X))
-    #y_model = esf_function(x_model,a_opt,b_opt,c_opt,D_opt,x0_opt)
-    #ax[1].plot(x_model,y_model,"--", color= "green", label = "Cubic curve fit", lw= 1.5)
-    #ax[1].legend(loc ="upper left", fontsize = 10)
     plt.tight_layout(pad = 1.25)
     plt.show()
 main()

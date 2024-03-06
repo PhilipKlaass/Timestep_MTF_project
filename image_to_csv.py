@@ -6,9 +6,9 @@ def open_images(*filename):
     out = ()
     for i in filename:
         img = ski.io.imread(i)
-        img_1 =img[400:600]
+        img_1 =img[300:700]
         img_roi = np.transpose(img_1)
-        img_roi = img_roi[900:1100]
+        img_roi = img_roi[800:1200]
         out = out + (img_roi,)
     return out
 
@@ -48,6 +48,6 @@ def main():
     plt.colorbar()
     plt.title("Region of Interest")
     plt.show()
-    #save_as_csv(corrected_roi, "image0006_corrected_(400,600)-(900,1100).csv")
+    save_as_csv(corrected_roi, "image0006_corrected_(300,700)-(800,1200).csv")
 main()
 
