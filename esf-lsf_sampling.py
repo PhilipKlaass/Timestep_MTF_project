@@ -190,9 +190,9 @@ def make_scatter(array):
 
 
 def main():
-    array = get_array("image0006_corrected_(300,700)-(800,1200).csv", 400)
+    array = get_array("simulated_edge.csv", 100)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, -0.0479966,144,.95,4)
+    esf = get_esf(array, -0.09162978572970237,49,.95,15)
     X,Y =  make_scatter(sorted(esf))
     binned_esf = esf_bin_smooth(X,Y, 0.1)
 
@@ -214,7 +214,7 @@ def main():
     ax[0][1].set_title("Binned into 0.1 pixel width")
 
 
-    N = 242 #number of samples
+    N = 5000 #number of samples
     R = max(X_median)-min(X_median) #range of samples in pixel pitch
     delta_x = (R)/(N) #spacing of samples in mm, one pixel = 2.2 microns
     fs = N/R #sampling frequency
@@ -263,7 +263,7 @@ def main():
     ax[1][2].plot(xf2,yf2,'.',color="green")
     ax[1][2].plot(xf,yf,'-', color = "blue", lw = 0.5)
     ax[1][2].set_title("|FFT| of LSF")
-    ax[1][2].set_xlim([0,75])
+    ax[1][2].set_xlim([0,200])
     ax[1][2].set_ylim([0,1])
     ax[1][2].set_xlabel("Cycles per mm")
 

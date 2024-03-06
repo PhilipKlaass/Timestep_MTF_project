@@ -40,8 +40,8 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("image0006_corrected_(400,600)-(900,1100).csv",200)
-    array  = detect_edge_points(array1, threshold =0.15)
+    array1 =get_array("simulated_edge.csv",100)
+    array  = detect_edge_points(array1, threshold =0.25)
 
 
 
@@ -75,7 +75,7 @@ def main():
     ax[3].set_axis_off()
     ax[3].set_title('Detected lines')
     lines = []
-    for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = 125)):
+    for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = 80)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ax[3].axline((x0, y0), slope=np.tan(angle + np.pi/2))
         lines.append((_,angle,dist))
