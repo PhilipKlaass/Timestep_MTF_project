@@ -21,18 +21,17 @@ def make_object_plane(theta, roi_height, roi_width,dark,bright):
     column = roi_width
 
     #array that will hold our simulated pixel values
-    roi = np.zeros((row,column))
+    roi = np.zeros((row,column),np.int8)
 
     #angle that the edge is tilted w.r.t. to vertical is theta
     # x-postion which the edge starts on the top of the roi
     edge_start = int(column/2)
     for y in range(0,row):
-        for x in range(0, column):
+        for x in range(edge_start-2*int(roi_height*np.tan((np.pi/180)*theta)),roi_width):
             if x < edge_start or x < edge_start-np.tan((np.pi/180)*theta)*y:
                 roi[y,x] = dark
             if x>=edge_start or x >= edge_start-np.tan((np.pi/180)*theta)*y:
                 roi[y,x]  = bright
-
     return roi
 
 
@@ -108,10 +107,10 @@ def save_as_csv(array,filename):
     f.close()
 
 def main():
-    object_edge = make_object_plane(5,1000,1000,20,200)
+    object_edge = make_object_plane(2.75,1000,1000,0,1)
     #save_as_csv(object_edge)
-    image = make_image_plane(object_edge,100)
-    save_as_csv(image, "perfect_lsf.csv")
+    image = make_image_plane(object_edge,200)
+    save_as_csv(image, "perfect_lsf_theta=2.75.csv")
     #image_with_lsf,lsf = make_line_spread(image)
     #noisy_image = add_poisson(image_with_lsf,0.3)
     plt.imshow(image, interpolation='nearest')
