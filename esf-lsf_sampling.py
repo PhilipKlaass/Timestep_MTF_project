@@ -189,12 +189,38 @@ def make_scatter(array):
     return (X,Y)
 
 
+"""
+Summary:
+    Outputs the modulus of the fft of an array, and the associated real 
+    frequencies in cycles/mm
+Variables:
+    - lsf_inten: a 1-D array of pixel intensities
+    - lsf_dist: a 1-D array of distances in pixel pitch
+    - N: number of samples expected to be equal to length of lsf_inten
+    - pixel_size: in microns, needed to convert to real frequencies
+"""
+def make_mtf_plot(lsf_dist,lsf_inten,N,pixel_size):
+    R = np.abs(max(lsf_dist))+np.abs(min(lsf_dist)) #range of samples in pixel pitch
+    delta_x = R/N #spacing of samples
+    fs = N/R #sampling frequency
+    k = np.linspace(0,N,N,endpoint=False) #indexes for the fourier frequencies
+    X = (k/N)*(1/R)*(pixel_size/0.001) #converts to fourier freq
+                                                     #and normalize to cycles/mm
+    Y = scipy.fft.fft(lsf_inten,N)
+    Y = np.abs(Y)
+    mY = max(Y)
+    for i in range(len(Y)):
+        Y[i]= Y[i]/mY
+    return X,Y
+
+
+
 def main():
     array = get_array("image0006_corrected_(400,600)-(900,1100).csv", 200)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, -0.047996554429844185,39,.75,5)
-    X,Y =  make_scatter(sorted(esf))
-    binned_esf = esf_bin_smooth(X,Y, 0.1)
+    esf = get_esf(array, -0.047996554429844185,39,.95,5)
+    X2,Y2 =  make_scatter(sorted(esf))
+    binned_esf = esf_bin_smooth(X2,Y2, 0.1)
 
     X_binned , Y_binned = make_scatter(binned_esf)
     
@@ -205,7 +231,7 @@ def main():
 
     plt.style.use(["science", "notebook", "grid"])
     fig , ax = plt.subplots(2,3, figsize = (12,8))
-    ax[0][0].plot(X,Y,".", ms= 2)
+    ax[0][0].plot(X2,Y2,".", ms= 2)
     ax[0][0].set_title("Oversampled ESF/ERF")
 
     ax[0][1].plot(X_avgfilter,Y_avgfilter, "-", ms= 2, color = "g")
@@ -214,16 +240,16 @@ def main():
     ax[0][1].set_title("Binned into 0.1 pixel width")
 
 
-    N = 5000 #number of samples
-    R = max(X_median)-min(X_median) #range of samples in pixel pitch
-    delta_x = (R)/(N) #spacing of samples in mm, one pixel = 2.2 microns
+    N = 500 #number of samples
+    R = max(X_median)-min(X_median) #range of samples in pixel pitch, one pixel = 2.2 microns
+    delta_x = (R)/(N) #spacing of samples
     fs = N/R #sampling frequency
-    k = np.linspace(0,N/2,int(N/2)+1)
+    k = np.linspace(0,N/2,int(N/2)+1) #indexes for the fourier frequencies
 
 
     X_interp = np.linspace(-R/2,R/2,N)
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,51,2)
+    Yhat = scipy.signal.savgol_filter(Y_interp,51,3)
     ax[0][2].plot(X_interp,Y_interp,"--",label= "PCHIP Interpolation", lw= 0.75)
     ax[0][2].set_title("Peicewise Cubic Interpolation")
 
@@ -237,7 +263,7 @@ def main():
     for i in range(len(dy)):
         dy[i] = dy[i]/mdy
 
-    dx2,dy2 = get_derivative(X_interp,Y_interp)
+    dx2,dy2 = get_derivative(X_interp,Yhat)
     mdy2 = max(dy2)
     for i in range(len(dy2)):
         dy2[i] = dy2[i]/mdy2
@@ -247,9 +273,9 @@ def main():
 
 
 
-    
-    xf = scipy.fft.fftfreq(N,delta_x)*(1/R)*(2.2/0.001)
-    xf2 = k/(N*delta_x)
+    '''
+    xf = scipy.fft.fftfreq(N,delta_x)*(2*np.pi/R)*(2.2/0.001)
+    xf2 = k/(N*delta_x)*(2*np.pi/R)*(2.2/0.001)
     yf2 = scipy.fft.rfft(dy)
     yf2 = np.abs(yf2)
     yf = scipy.fft.fft(dy)
@@ -260,14 +286,24 @@ def main():
         yf[i] = yf[i]/maxyf
     for i in range(len(yf2)):
         yf2[i] = yf2[i]/maxyf2
-    ax[1][2].plot(xf2,yf2,'.',color="green")
-    ax[1][2].plot(xf,yf,'-', color = "blue", lw = 0.5)
+    '''
+    xf2,yf2 = make_mtf_plot(X_median,dy2,50000,2.2)
+    xf3,yf3 = make_mtf_plot(X_median,dy2,5000,2.2)
+    xf4,yf4 = make_mtf_plot(X_median,dy2,500,2.2)
+
+
+    ax[1][2].plot(xf2,yf2,'-',color="green")
+    ax[1][2].plot(xf3,yf3,'-')
+    ax[1][2].plot(xf4,yf4,'-')
+
+
+
+    #ax[1][2].plot(xf,yf,'-', color = "blue", lw = 0.5)
     ax[1][2].set_title("|FFT| of LSF")
-    ax[1][2].set_xlim([0,200])
-    ax[1][2].set_ylim([0,1])
+   # ax[1][2].set_xlim([0,200])
+   # ax[1][2].set_ylim([0,1])
     ax[1][2].set_xlabel("Cycles per mm")
 
-    print(xf)
     print(delta_x)
     print(len(X_median))
 
