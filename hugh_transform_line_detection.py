@@ -40,8 +40,8 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("simulated_edge.csv",100)
-    array  = detect_edge_points(array1, threshold =0.25)
+    array1 =get_array("image0006_corrected_(400,600)-(900,1100).csv",200)
+    array  = detect_edge_points(array1, threshold =0.15)
 
 
 

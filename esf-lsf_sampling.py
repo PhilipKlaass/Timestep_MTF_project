@@ -190,9 +190,9 @@ def make_scatter(array):
 
 
 def main():
-    array = get_array("simulated_edge.csv", 100)
+    array = get_array("image0006_corrected_(400,600)-(900,1100).csv", 200)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, -0.09162978572970237,49,.95,15)
+    esf = get_esf(array, -0.047996554429844185,39,.75,5)
     X,Y =  make_scatter(sorted(esf))
     binned_esf = esf_bin_smooth(X,Y, 0.1)
 
