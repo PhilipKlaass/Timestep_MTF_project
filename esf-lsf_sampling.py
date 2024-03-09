@@ -200,12 +200,11 @@ Variables:
     - pixel_size: in microns, needed to convert to real frequencies
 """
 def make_mtf_plot(lsf_dist,lsf_inten,N,pixel_size):
-    R = np.abs(max(lsf_dist))+np.abs(min(lsf_dist)) #range of samples in pixel pitch
+    R = np.abs(max(lsf_dist))+np.abs(min(lsf_dist)) #range of samples in units of pixel pitch
     delta_x = R/N #spacing of samples
     fs = N/R #sampling frequency
     k = np.linspace(0,N,N,endpoint=False) #indexes for the fourier frequencies
-    X = (k/N)*(1/R)*(pixel_size/0.001) #converts to fourier freq
-                                                     #and normalize to cycles/mm
+    X = (k/N)*(1/R)*(pixel_size/0.001) #converts to fourier freq and normalize to cycles/mm
     Y = scipy.fft.fft(lsf_inten,N)
     Y = np.abs(Y)
     mY = max(Y)
@@ -289,7 +288,7 @@ def main():
     '''
     xf2,yf2 = make_mtf_plot(X_median,dy2,50000,2.2)
     xf3,yf3 = make_mtf_plot(X_median,dy2,5000,2.2)
-    xf4,yf4 = make_mtf_plot(X_median,dy2,500,2.2)
+    xf4,yf4 = make_mtf_plot(X_median,dy2,498,2.2)
 
 
     ax[1][2].plot(xf2,yf2,'-',color="green")
