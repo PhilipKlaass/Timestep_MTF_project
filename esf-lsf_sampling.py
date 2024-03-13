@@ -199,7 +199,28 @@ Variables:
     - N: number of samples expected to be equal to length of lsf_inten
     - pixel_size: in microns, needed to convert to real frequencies
 """
-def make_mtf_plot(lsf_dist,lsf_inten,N,pixel_size):
+def make_mtf_plot(lsf_dist,lsf_inten,pixel_size):
+    N= len(lsf_inten)
+    n = np.arange(N)
+    k = n.reshape((N,1))
+    e = np.exp(-2j*2*np.pi*k*(n/N)) #NxN array with columns of exp(-2j*pi*kn/N)
+    X= np.dot(e,lsf_inten)  #matrix multiplication, FFT
+    X1 = scipy.fft.fft(lsf_inten)
+    X==X1
+    X =np.abs(X) #modulus of the FFT
+
+    R = (max(lsf_dist)-min(lsf_dist))#range in units of pixels
+    sr = R/N #sampling rate
+    freq = n/R*(pixel_size/0.001) #spatial frequency in cycles/mm
+
+
+    return freq ,X
+
+
+
+
+
+    """
     R = np.abs(max(lsf_dist))+np.abs(min(lsf_dist)) #range of samples in pixel pitch
     delta_x = R/N #spacing of samples
     fs = N/R #sampling frequency
@@ -212,13 +233,13 @@ def make_mtf_plot(lsf_dist,lsf_inten,N,pixel_size):
     for i in range(len(Y)):
         Y[i]= Y[i]/mY
     return X,Y
-
+"""
 
 
 def main():
     array = get_array("image0006_corrected_(400,600)-(900,1100).csv", 200)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, -0.047996554429844185,39,.95,5)
+    esf = get_esf(array, -0.047996554429844185,39,1.01,5)
     X2,Y2 =  make_scatter(sorted(esf))
     binned_esf = esf_bin_smooth(X2,Y2, 0.1)
 
@@ -240,16 +261,10 @@ def main():
     ax[0][1].set_title("Binned into 0.1 pixel width")
 
 
-    N = 500 #number of samples
-    R = max(X_median)-min(X_median) #range of samples in pixel pitch, one pixel = 2.2 microns
-    delta_x = (R)/(N) #spacing of samples
-    fs = N/R #sampling frequency
-    k = np.linspace(0,N/2,int(N/2)+1) #indexes for the fourier frequencies
 
-
-    X_interp = np.linspace(-R/2,R/2,N)
+    X_interp = np.linspace(min(X_median), max(X_median),400)
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,51,3)
+    Yhat = scipy.signal.savgol_filter(Y_interp,51,5)
     ax[0][2].plot(X_interp,Y_interp,"--",label= "PCHIP Interpolation", lw= 0.75)
     ax[0][2].set_title("Peicewise Cubic Interpolation")
 
@@ -287,14 +302,11 @@ def main():
     for i in range(len(yf2)):
         yf2[i] = yf2[i]/maxyf2
     '''
-    xf2,yf2 = make_mtf_plot(X_median,dy2,50000,2.2)
-    xf3,yf3 = make_mtf_plot(X_median,dy2,5000,2.2)
-    xf4,yf4 = make_mtf_plot(X_median,dy2,500,2.2)
+    xf2,yf2 = make_mtf_plot(X_median,dy2,2.2)
 
 
-    ax[1][2].plot(xf2,yf2,'-',color="green")
-    ax[1][2].plot(xf3,yf3,'-')
-    ax[1][2].plot(xf4,yf4,'-')
+    ax[1][2].plot(xf2,yf2,'.',color="green")
+
 
 
 
@@ -304,8 +316,7 @@ def main():
    # ax[1][2].set_ylim([0,1])
     ax[1][2].set_xlabel("Cycles per mm")
 
-    print(delta_x)
-    print(len(X_median))
+    print(len(X_interp),len(dy2))
 
     plt.tight_layout(pad = 1.25)
     plt.show()
