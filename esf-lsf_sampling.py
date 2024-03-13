@@ -225,8 +225,7 @@ def make_mtf_plot(lsf_dist,lsf_inten,pixel_size):
     delta_x = R/N #spacing of samples
     fs = N/R #sampling frequency
     k = np.linspace(0,N,N,endpoint=False) #indexes for the fourier frequencies
-    X = (k/N)*(1/R)*(pixel_size/0.001) #converts to fourier freq
-                                                     #and normalize to cycles/mm
+    X = (k/N)*(1/R)*(pixel_size/0.001) #converts to fourier freq and normalize to cycles/mm
     Y = scipy.fft.fft(lsf_inten,N)
     Y = np.abs(Y)
     mY = max(Y)
