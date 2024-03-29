@@ -199,19 +199,22 @@ Variables:
     - N: number of samples expected to be equal to length of lsf_inten
     - pixel_size: in microns, needed to convert to real frequencies
 """
-def make_mtf_plot(lsf_dist,lsf_inten,pixel_size):
+def FFT(lsf_dist,lsf_inten,pixel_size):
     N= len(lsf_inten)
     n = np.arange(N)
     k = n.reshape((N,1))
     e = np.exp(-2j*2*np.pi*k*(n/N)) #NxN array with columns of exp(-2j*pi*kn/N)
     X= np.dot(e,lsf_inten)  #matrix multiplication, FFT
     X1 = scipy.fft.fft(lsf_inten)
-    X==X1
-    X =np.abs(X) #modulus of the FFT
+    X =np.abs(X1) #modulus of the FFT
+
+    m = max(X)
+    for i in range(len(X)):
+        X[i]= X[i]/m
 
     R = (max(lsf_dist)-min(lsf_dist))#range in units of pixels
-    sr = R/N #sampling rate
-    freq = n/R*(pixel_size/0.001) #spatial frequency in cycles/mm
+    sr = N/(R) #sampling rate
+    freq = k*sr/N #spatial frequency in cycles/mm
 
 
     return freq ,X
@@ -236,11 +239,11 @@ def make_mtf_plot(lsf_dist,lsf_inten,pixel_size):
 
 
 def main():
-    array = get_array("image0006_corrected_(400,600)-(900,1100).csv", 200)
+    array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, -0.047996554429844185,39,1.01,5)
+    esf = get_esf(array, 0.10035643198967392,119,0.95,5)
     X2,Y2 =  make_scatter(sorted(esf))
-    binned_esf = esf_bin_smooth(X2,Y2, 0.1)
+    binned_esf = esf_bin_smooth(X2,Y2, .1)
 
     X_binned , Y_binned = make_scatter(binned_esf)
     
@@ -254,20 +257,21 @@ def main():
     ax[0][0].plot(X2,Y2,".", ms= 2)
     ax[0][0].set_title("Oversampled ESF/ERF")
 
-    ax[0][1].plot(X_avgfilter,Y_avgfilter, "-", ms= 2, color = "g")
-    ax[0][1].plot(X_median,Y_median, "o", ms= 2, color = "red")
-    ax[0][1].plot(X_binned,Y_binned, ".", ms= 2)
+    ax[0][1].plot(X_avgfilter,Y_avgfilter, ".-", lw= 1, color = "g", label ="average")
+    ax[0][1].plot(X_median,Y_median, ".-", lw= .5, color = "red", label = "median")
+    ax[0][1].plot(X_binned,Y_binned, ".-", lw= .5, label = 'binned')
+    ax[0][1].legend(fontsize = 12)
     ax[0][1].set_title("Binned into 0.1 pixel width")
 
 
 
-    X_interp = np.linspace(min(X_median), max(X_median),400)
+    X_interp = np.linspace(min(X_median), max(X_median),5000)
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,51,5)
-    ax[0][2].plot(X_interp,Y_interp,"--",label= "PCHIP Interpolation", lw= 0.75)
+    Yhat = scipy.signal.savgol_filter(Y_interp,51,2,0)
+    ax[0][2].plot(X_interp,Y_interp,".",label= "PCHIP Interpolation", lw= 0.75)
     ax[0][2].set_title("Peicewise Cubic Interpolation")
 
-    ax[1][0].plot(X_interp,Yhat,'-', color = 'r',  lw = 1.5)
+    ax[1][0].plot(X_interp,Yhat,'.', color = 'r',  lw = 1.5)
     ax[1][0].set_title("Savitsky-Golay filter applied")
 
 
@@ -278,16 +282,66 @@ def main():
         dy[i] = dy[i]/mdy
 
     dx2,dy2 = get_derivative(X_interp,Yhat)
+
     mdy2 = max(dy2)
     for i in range(len(dy2)):
         dy2[i] = dy2[i]/mdy2
     ax[1][1].plot(dx2,dy2, ".", color ='green')
-    ax[1][1].plot(X_interp,dy,"b")
-    ax[1][1].set_title("Derivative using(np.gradient)")
+    #ax[1][1].plot(X_interp,dy,"b")
+    
+    Yhat_smoothed= scipy.signal.savgol_filter(Yhat, 500,2, 0)
+    mdy2 = Yhat_smoothed[int(len(Yhat_smoothed)/2)]
+    for i in range(len(Yhat_smoothed)):
+        Yhat_smoothed[i] = Yhat_smoothed[i]/mdy2
+    for i in range(len(Yhat_smoothed)):
+        if Yhat_smoothed[i]>1:
+            Yhat_smoothed[i]= 0
+    #ax[1][1].plot(X_interp, Yhat_smoothed)
+
+    ax[1][1].set_title("Derivative, LSF")
+
+
+  
+
+    
+
+  
+    xf2,yf2 = FFT(X_interp,dy2,2.2)
+    print(len(xf2), len(yf2))
+    print(max(X_median),min(X_interp))
+
+    ax[1][2].plot(xf2,yf2,'.-',color="green", lw= 0.5)
 
 
 
-    '''
+
+    #ax[1][2].plot(xf,yf,'-', color = "blue", lw = 0.5)
+    ax[1][2].set_title("|FFT| of LSF")
+    ax[1][2].set_xlim([0,2])
+    #ax[1][2].set_ylim([0,1])
+    ax[1][2].set_xlabel("Cycles per pixel")
+
+
+    plt.tight_layout(pad = 1.25)
+    plt.show()
+main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
     xf = scipy.fft.fftfreq(N,delta_x)*(2*np.pi/R)*(2.2/0.001)
     xf2 = k/(N*delta_x)*(2*np.pi/R)*(2.2/0.001)
     yf2 = scipy.fft.rfft(dy)
@@ -300,23 +354,4 @@ def main():
         yf[i] = yf[i]/maxyf
     for i in range(len(yf2)):
         yf2[i] = yf2[i]/maxyf2
-    '''
-    xf2,yf2 = make_mtf_plot(X_median,dy2,2.2)
-
-
-    ax[1][2].plot(xf2,yf2,'.',color="green")
-
-
-
-
-    #ax[1][2].plot(xf,yf,'-', color = "blue", lw = 0.5)
-    ax[1][2].set_title("|FFT| of LSF")
-   # ax[1][2].set_xlim([0,200])
-   # ax[1][2].set_ylim([0,1])
-    ax[1][2].set_xlabel("Cycles per mm")
-
-    print(len(X_interp),len(dy2))
-
-    plt.tight_layout(pad = 1.25)
-    plt.show()
-main()
+'''

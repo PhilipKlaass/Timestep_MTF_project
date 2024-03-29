@@ -6,9 +6,9 @@ def open_images(*filename):
     out = ()
     for i in filename:
         img = ski.io.imread(i)
-        img_1 =img[300:700]
+        img_1 =img[100:300]
         img_roi = np.transpose(img_1)
-        img_roi = img_roi[800:1200]
+        img_roi = img_roi[50:250]
         out = out + (img_roi,)
     return out
 
@@ -42,12 +42,12 @@ def flatfield_correction(light, dark, image):
 
 def main():
     
-    roi, light, dark = open_images("image0006.tiff","image0006_light.bmp", "dark.bmp")
+    roi, light, dark = open_images("image0008.bmp","image0008_light.bmp", "image0008_dark.bmp")
     corrected_roi = flatfield_correction(light,dark,roi)
     plt.imshow(corrected_roi,interpolation='nearest')
     plt.colorbar()
     plt.title("Region of Interest")
     plt.show()
-    save_as_csv(corrected_roi, "image0006_corrected_(300,700)-(800,1200).csv")
+    save_as_csv(corrected_roi, "image0008_corrected_(100,300)-(50,250).csv")
 main()
 
