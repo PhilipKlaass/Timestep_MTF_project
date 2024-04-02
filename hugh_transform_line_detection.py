@@ -40,8 +40,8 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("image0008_corrected_(100,300)-(50,250).csv",200)
-    array  = detect_edge_points(array1, threshold =0.25)
+    array1 =get_array("perfect_lsf_theta=2.75.csv",200)
+    array  = detect_edge_points(array1, threshold =0.35)
 
 
 

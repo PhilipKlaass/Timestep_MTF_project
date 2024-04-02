@@ -4,7 +4,6 @@ from math import floor
 import scipy
 import scienceplots
 
-
 """
 Convert from csv to numpy array
 """
@@ -214,7 +213,7 @@ def FFT(lsf_dist,lsf_inten,pixel_size):
 
     R = (max(lsf_dist)-min(lsf_dist))#range in units of pixels
     sr = N/(R) #sampling rate
-    freq = k*sr/N #spatial frequency in cycles/mm
+    freq = n*sr/N #spatial frequency in cycles/mm
 
 
     return freq ,X
@@ -241,7 +240,7 @@ def FFT(lsf_dist,lsf_inten,pixel_size):
 def main():
     array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, 0.10035643198967392,119,0.95,5)
+    esf = get_esf(array, 0.10035643198967392,119,0.95,3)
     X2,Y2 =  make_scatter(sorted(esf))
     binned_esf = esf_bin_smooth(X2,Y2, .1)
 
@@ -252,7 +251,7 @@ def main():
     X_median, Y_median, median = median_filter(average,13)
     
 
-    plt.style.use(["science", "notebook", "grid"])
+    plt.style.use(["science", "notebook"])
     fig , ax = plt.subplots(2,3, figsize = (12,8))
     ax[0][0].plot(X2,Y2,".", ms= 2)
     ax[0][0].set_title("Oversampled ESF/ERF")
@@ -265,7 +264,7 @@ def main():
 
 
 
-    X_interp = np.linspace(min(X_median), max(X_median),5000)
+    X_interp = np.linspace(min(X_median), max(X_median),1000)
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
     Yhat = scipy.signal.savgol_filter(Y_interp,51,2,0)
     ax[0][2].plot(X_interp,Y_interp,".",label= "PCHIP Interpolation", lw= 0.75)
@@ -307,8 +306,6 @@ def main():
 
   
     xf2,yf2 = FFT(X_interp,dy2,2.2)
-    print(len(xf2), len(yf2))
-    print(max(X_median),min(X_interp))
 
     ax[1][2].plot(xf2,yf2,'.-',color="green", lw= 0.5)
 
@@ -318,6 +315,7 @@ def main():
     #ax[1][2].plot(xf,yf,'-', color = "blue", lw = 0.5)
     ax[1][2].set_title("|FFT| of LSF")
     ax[1][2].set_xlim([0,2])
+    ax[1][2].set_ylim([-0.01,1])
     #ax[1][2].set_ylim([0,1])
     ax[1][2].set_xlabel("Cycles per pixel")
 
@@ -341,7 +339,9 @@ main()
 
 
 
-'''
+''' 
+ignore this bit, I manually calculated the fft
+
     xf = scipy.fft.fftfreq(N,delta_x)*(2*np.pi/R)*(2.2/0.001)
     xf2 = k/(N*delta_x)*(2*np.pi/R)*(2.2/0.001)
     yf2 = scipy.fft.rfft(dy)

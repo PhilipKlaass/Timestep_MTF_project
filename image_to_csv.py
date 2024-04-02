@@ -44,10 +44,10 @@ def main():
     
     roi, light, dark = open_images("image0008.bmp","image0008_light.bmp", "image0008_dark.bmp")
     corrected_roi = flatfield_correction(light,dark,roi)
-    plt.imshow(corrected_roi,interpolation='nearest')
+    plt.imshow(corrected_roi,interpolation='nearest', cmap = "gist_grey")
     plt.colorbar()
     plt.title("Region of Interest")
     plt.show()
-    save_as_csv(corrected_roi, "image0008_corrected_(100,300)-(50,250).csv")
+    #save_as_csv(corrected_roi, "image0008_corrected_(100,300)-(50,250).csv")
 main()
 
