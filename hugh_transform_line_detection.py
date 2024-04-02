@@ -50,9 +50,11 @@ def main():
     fig, axes = plt.subplots(1,4,figsize = (15,6))
     ax = axes.ravel()
 
-    ax[0].imshow(array1)
+    ax[0].imshow(array1, cmap= cm.gray, interpolation= 'none')
     ax[0].set_title("Input Image")
-    ax[0].set_axis_off()
+    ax[0].set_xlim(0,len(array1))
+    ax[0].set_ylim(0,len(array1))
+    #ax[0].set_axis_off()
 
     ax[1].imshow(array, cmap=cm.gray)
     ax[1].set_title('Input image with edge points identified')
@@ -74,12 +76,19 @@ def main():
     ax[3].set_ylim((array.shape[0], 0))
     ax[3].set_axis_off()
     ax[3].set_title('Detected lines')
+
     lines = []
     for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = 80)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ax[3].axline((x0, y0), slope=np.tan(angle + np.pi/2))
         lines.append((_,angle,dist))
     print(lines)
+    pltlines=[]
+    for i in lines:
+        x = np.linspace(0,len(array), 250)
+        y= (i[2]-x*np.cos(i[1])) / np.sin(i[1])
+        ax[0].plot(x,y, color = "r", lw= 1)
+        pltlines.append((x,y))
     plt.tight_layout()
     plt.show()
 
