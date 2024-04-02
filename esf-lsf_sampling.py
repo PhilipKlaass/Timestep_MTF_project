@@ -3,12 +3,19 @@ import numpy as np
 from math import floor
 import scipy
 import scienceplots
+import os
+import os.path
 
+
+
+script_dir= os.path.dirname(__file__)
 """
 Convert from csv to numpy array
 """
 def get_array(filename, size):
-    f = open(str(filename), "r")
+    rel_path = "images_csv/" + filename
+    abs_file_path = os.path.join(script_dir,rel_path)
+    f = open(abs_file_path, "r")
     array = np.ones((size,size))
     m =0
     for line in f:

@@ -1,11 +1,18 @@
 import skimage as ski
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import os.path
+import shutil
+
+script_dir= os.path.dirname(__file__)
 
 def open_images(*filename):
     out = ()
     for i in filename:
-        img = ski.io.imread(i)
+        rel_path = "images/" + i
+        abs_file_path = os.path.join(script_dir,rel_path)
+        img = ski.io.imread(abs_file_path)
         img_1 =img[100:300]
         img_roi = np.transpose(img_1)
         img_roi = img_roi[50:250]

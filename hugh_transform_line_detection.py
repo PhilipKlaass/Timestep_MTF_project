@@ -4,12 +4,17 @@ from skimage.transform import hough_line, hough_line_peaks
 from skimage.feature import canny
 from skimage.draw import line as draw_line
 from skimage import data
-
+import os
+import os.path
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
+script_dir= os.path.dirname(__file__)
+
 def get_array(filename, size):
-    f = open(filename, "r")
+    rel_path = "images_csv/" + filename
+    abs_file_path = os.path.join(script_dir,rel_path)
+    f = open(abs_file_path, "r")
     array = np.ones((size,size))
     m =0
     for line in f:
@@ -20,6 +25,7 @@ def get_array(filename, size):
             array[m][n] = float(i)
             n+=1
         m +=1
+    f.close()
     return array
 
 def detect_edge_points(array, threshold):
