@@ -26,6 +26,7 @@ def get_array(filename, size):
             array[m][n] = float(i)
             n+=1
         m +=1
+    f.close()
     return array
 
 """
@@ -159,30 +160,6 @@ def get_derivative(x,y):
 
 
 
-def get_esf2(array, theta, r, sampling_frequency, sample_number):
-    theta = -theta
-    esf = []
-    for row in range(0,len(array),6):
-        y1 = row+0.5
-        x1 = r/np.cos(theta) -y1*np.tan(theta)
-        col = floor(x1)
-        if col in range(len(array)):
-            intensity = array[row][col]
-            dist = col-x1
-            #(np.cos(theta)*col+np.sin(theta)*y1-r)
-            esf.append((dist,intensity))
-        col = col-sample_number
-        for i in range(2*sample_number):
-            col += i
-            if 0<col<len(array):
-                intensity = array[row][floor(col)]
-                dist = col-x1
-                #(np.cos(theta)*(col+0.5)+np.sin(theta)*y1-r)
-                esf.append((dist, intensity))
-    return esf
-
-
-
 '''
 Split a list of tuples into x and y arrays.
 '''
@@ -257,6 +234,7 @@ def main():
 
     X_median, Y_median, median = median_filter(average,13)
     
+    smoothing = [("binned",X_binned,Y_binned), ("averaaged",X_avgfilter,Y_avgfilter), ("median",X_median,Y_median)]
 
     plt.style.use(["science", "notebook"])
     fig , ax = plt.subplots(2,3, figsize = (12,8))
@@ -279,22 +257,33 @@ def main():
 
     ax[1][0].plot(X_interp,Yhat,'.', color = 'r',  lw = 1.5)
     ax[1][0].set_title("Savitsky-Golay filter applied")
-
+    smoothing.append(("interpolated+savgol", X_interp,Yhat))
 
     
-    dy = np.gradient(Yhat,X_interp)
-    mdy = max(dy)
-    for i in range(len(dy)):
-        dy[i] = dy[i]/mdy
 
-    dx2,dy2 = get_derivative(X_interp,Yhat)
+    for label1,x,y in smoothing:
+        dx1,dy1 = get_derivative(x,y)
 
-    mdy2 = max(dy2)
-    for i in range(len(dy2)):
-        dy2[i] = dy2[i]/mdy2
-    ax[1][1].plot(dx2,dy2, ".", color ='green')
-    #ax[1][1].plot(X_interp,dy,"b")
+        mdy1 = max(dy1)
+        for i in range(len(dy1)):
+            dy1[i] = dy1[i]/mdy1
+        ax[1][1].plot(dx1,dy1, ".-", label = label1)
+        #ax[1][1].plot(X_interp,dy,"b")
+
+
+
+        ax[1][1].set_title("Derivative, LSF")
+
+        xf1,yf1 = FFT(X_interp,dy1,2.2)
+        ax[1][2].plot(xf1,yf1,'.-', lw= 0.5, label = label1)
+    ax[1][1].legend(fontsize = 12)
+    ax[1][2].legend(fontsize = 12)
+
+  
     
+
+
+
     Yhat_smoothed= scipy.signal.savgol_filter(Yhat, 500,2, 0)
     mdy2 = Yhat_smoothed[int(len(Yhat_smoothed)/2)]
     for i in range(len(Yhat_smoothed)):
@@ -304,17 +293,7 @@ def main():
             Yhat_smoothed[i]= 0
     #ax[1][1].plot(X_interp, Yhat_smoothed)
 
-    ax[1][1].set_title("Derivative, LSF")
-
-
-  
-
     
-
-  
-    xf2,yf2 = FFT(X_interp,dy2,2.2)
-
-    ax[1][2].plot(xf2,yf2,'.-',color="green", lw= 0.5)
 
 
 
