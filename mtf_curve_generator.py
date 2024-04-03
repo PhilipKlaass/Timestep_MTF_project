@@ -1,11 +1,8 @@
 import numpy as np
-import random as rand
-import scipy
 from scipy.integrate import dblquad
 from matplotlib import pyplot as plt
 from scipy.integrate import quad
 from matplotlib import cm
-from mpl_toolkits import mplot3d
 import cv2
 
 ''''
@@ -38,7 +35,21 @@ def make_object_plane(theta, roi_height, roi_width,dark,bright):
     return roi
 
 
-
+def make_PSFimage(size,dark,light):
+    out = np.zeros((size,size))
+    for i in range(len(out)):
+        for j in range(i):
+            out[i][j] = dark
+    center = int(np.floor(size/2))
+    if center< size/2:
+        out[center][center] = light
+        return out
+    else:
+        out[center][center] = light
+        out[center+1][center] = light
+        out[center][center+1] = light
+        out[center+1][center+1] = light
+        return out
 
 def make_image_plane(object_plane, size):
     image_plane = np.zeros((size,size))
@@ -55,7 +66,9 @@ def make_image_plane(object_plane, size):
 def make_kernal(xscaling_factor, yscaling_factor, kernel_size):
     f = lambda x,y: np.exp(-xscaling_factor*x**2-yscaling_factor*y**2)
     kernal = np.zeros((kernel_size,kernel_size))
-    total = dblquad(f, np.Infinity,-np.Infinity,np.Infinity,-np.Infinity)[0]
+    total = dblquad(f, kernel_size/2,-kernel_size/2,kernel_size/2,-kernel_size/2)[0]
+    #in general total is more accurate, however, total and total1 are often equivalent
+    total1 = dblquad(f, np.Infinity,-np.Infinity,np.Infinity,-np.Infinity)[0]
     for j in range(kernel_size):
         for i in range(kernel_size):
             xllim= -kernel_size/2+i
@@ -98,6 +111,19 @@ def make_lsf(theta,xscaling_factor, yscaling_factor):
         intensity[i]= intensity[i]/m_inten
     return dist, intensity
 
+def make_erf(theta,xscaling_factor, yscaling_factor):
+    dist =  np.linspace(-5,5, 100)
+    deltax= 10/100
+    f = lambda x: np.exp(x**2*(-yscaling_factor)-xscaling_factor*(np.tan(np.pi/180 *theta))**(2))
+    intensity = []
+    for i in dist:
+        intensity.append(quad(f, i+deltax/2, i-deltax/2)[0])
+    m_inten = max(intensity)
+    for i in range(len(intensity)):
+        intensity[i]= intensity[i]/m_inten
+    return dist, intensity
+
+
 def fft(a,b,theta):
     freqs = np.linspace(0,2,100)
     fourier_transform = []
@@ -126,22 +152,27 @@ def function(x,y,a,b):
     return np.exp(-a*x**2-b*y**2)
 
 def main():
-    a= .5
+    a= .1
     b= .5
     theta = 5
     object_edge = make_object_plane(theta,1000,1000,0,1)
     image = make_image_plane(object_edge,200)
+    psf_preimage = make_PSFimage(7,0,1)
 
     psf_kernal = make_kernal(a,b,7)
-    dist, intensity = make_lsf(a,b, 5)
+    dist, intensity = make_lsf(a,b, theta)
     freq,mtf = fft(a,b,theta)
+    dist1,inten = make_erf(theta,a,b)
     image2 = convolve(psf_kernal,image)
+    psfimage = convolve(psf_kernal, psf_preimage)
     fig, ax = plt.subplots(2,4, figsize = (16,8))
     ax[0][0].imshow(object_edge, cmap= cm.gray, interpolation= 'none')
     ax[0][1].imshow(image, cmap= cm.gray, interpolation= 'none')
-    ax[0][2].imshow(image2, cmap= cm.gray, interpolation= 'none')
-    ax[0][3].plot(dist,intensity, ".-")
-    ax[1][0].plot(freq,mtf)
+    ax[0][2].imshow(psfimage, cmap= cm.gray, interpolation= 'none')
+    ax[0][3].imshow(image2, cmap= cm.gray, interpolation= 'none')
+    ax[1][0].plot(dist,intensity, ".-")
+    ax[1][1].plot(freq,mtf)
+    ax[1][2].plot(dist1,inten)
 
     '''
     x= np.linspace(-4,4,25)
