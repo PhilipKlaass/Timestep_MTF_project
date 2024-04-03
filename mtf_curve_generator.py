@@ -142,7 +142,7 @@ def main():
     ax[0][2].imshow(image2, cmap= cm.gray, interpolation= 'none')
     ax[0][3].plot(dist,intensity, ".-")
     ax[1][0].plot(freq,mtf)
-
+    save_as_csv(image2, "sim_0001.csv")
     '''
     x= np.linspace(-4,4,25)
     y= np.linspace(-4,4,25)
