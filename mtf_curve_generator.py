@@ -1,9 +1,12 @@
 import numpy as np
 import random as rand
-from scipy import integrate
+import scipy
 from scipy.integrate import dblquad
 from matplotlib import pyplot as plt
-from scipy.fft import rfft, fftfreq
+from scipy.integrate import quad
+from matplotlib import cm
+from mpl_toolkits import mplot3d
+import cv2
 
 ''''
 loop to iterate over roi; rows first then columns.
@@ -49,32 +52,33 @@ def make_image_plane(object_plane, size):
     return image_plane
 
 
-def make_line_spread(edge):
-    edge_size_x = int(len(edge))
-    edge_size_y = int(len(edge[0]))
-    #random_scaling_factor 
-    K = rand.randint(2,5)
-    point_spread_edge = np.zeros((edge_size_x,edge_size_y))
-    lsf = lambda z: (1/(2*random_scaling_factor))*np.exp((-((z)**2)**(0.5))/random_scaling_factor)#+ np.abs(z)/(np.abs(z)+10000)) tried changing the lsf but messed up the mtf
-    total_intensity = integrate.quad(lsf,-np.inf,np.inf)
-    for x in range(0,edge_size_x):
-        for y in range(0,edge_size_y):
-            x1=0     
-            while x1 <edge_size_y:
-                #if y<int(0.3*edge_size_y) or y>int(0.7*edge_size_y):
-                #    point_spread_edge[x][y] = edge[x][y]
-                #else:
-                    dist_x = x1-y
-                    if -1<y+dist_x<edge_size_y:
-                        intensity_for_current_pixel= integrate.quad(lsf, -.1+dist_x*0.2, 0.1+dist_x*0.2)
-                        intensity_percentage = intensity_for_current_pixel[0]/total_intensity[0]
-                        new_intensity = intensity_percentage*edge[x][y]
-                        point_spread_edge[x][y+dist_x] += new_intensity
-                #x1+= 1
-                    x1+=1
-    print(random_scaling_factor)
-    make_mtf(lsf)
-    return (point_spread_edge,lsf)
+def make_kernal(xscaling_factor, yscaling_factor, kernel_size):
+    f = lambda x,y: np.exp(-xscaling_factor*x**2-yscaling_factor*y**2)
+    kernal = np.zeros((kernel_size,kernel_size))
+    total = dblquad(f, np.Infinity,-np.Infinity,np.Infinity,-np.Infinity)[0]
+    for j in range(kernel_size):
+        for i in range(kernel_size):
+            xllim= -kernel_size/2+i
+            xulim= -kernel_size/2+i+1
+            yllim= -kernel_size/2+j
+            yulim= -kernel_size/2+j+1
+            kernal[j][i] = (dblquad(f,xllim,xulim,yllim,yulim )[0])/total
+    return kernal
+
+def convolve(kernel, image):
+    (iH, iW) = image.shape[:2]
+    (kH, kW) = kernel.shape[:2]
+
+    pad = (kW-1)//2
+    image = cv2.copyMakeBorder(image, pad,pad,pad,pad,cv2.BORDER_REPLICATE)
+    output = np.zeros((iH,iW))
+    for j in np.arange(pad,iH+pad):
+        for i in np.arange(pad,iW+pad):
+            roi = image[j - pad:j + pad + 1, i - pad:i + pad + 1]
+            k = (roi * kernel).sum()
+            output[j-pad,i-pad]= k
+    return output
+
 
 def add_poisson(edge,density):
     edge_size_x = int(len(edge))
@@ -84,18 +88,30 @@ def add_poisson(edge,density):
 
 
 
-def make_mtf(lsf):
-    # Number of sample points
-    N = 1000
-    # sample spacing
-    T = 0.4
-    x = np.linspace(0.0, N*T, N, endpoint=False)
-    y = lsf(z=x)
-    yf = rfft(y)
-    xf = fftfreq(N, T)[:N//2]
-    plt.plot(xf, 2.0/N * np.abs(yf[0:N//2]))
-    plt.grid()
-    plt.show()
+def make_lsf(theta,xscaling_factor, yscaling_factor):
+    dist =  np.linspace(-5,5, 100)
+    intensity = []
+    for i in dist:
+        intensity.append( np.exp(i**2*(-yscaling_factor)-xscaling_factor*(np.tan(np.pi/180 *theta))**(2)))
+    m_inten = max(intensity)
+    for i in range(len(intensity)):
+        intensity[i]= intensity[i]/m_inten
+    return dist, intensity
+
+def fft(a,b,theta):
+    freqs = np.linspace(0,2,100)
+    fourier_transform = []
+    for  i in freqs:
+        real_integrand =lambda x: np.exp(x**2*(-b-a*(np.tan(np.pi/180 *theta))**(2)))*np.cos(-1*2*np.pi*i*x)
+        imaginary_integrand = lambda x: np.exp(x**2*(-b-a*(np.tan(np.pi/180 *theta))**(2)))*np.sin(-1*2*np.pi*i*x)
+        fhat = (quad(real_integrand, -np.Infinity,np.Infinity))[0]**2+(quad(imaginary_integrand, -np.Infinity,np.Infinity))[0]**2
+        fourier_transform.append(fhat)
+    mtf = np.abs(fourier_transform)
+    m_inten = max(mtf)
+    for i in range(len(mtf)):
+        mtf[i]= mtf[i]/m_inten
+    return freqs,mtf
+
 
 
 def save_as_csv(array,filename):
@@ -106,14 +122,36 @@ def save_as_csv(array,filename):
         f.write('\n')
     f.close()
 
+def function(x,y,a,b):
+    return np.exp(-a*x**2-b*y**2)
+
 def main():
-    object_edge = make_object_plane(2.75,1000,1000,0,1)
-    #save_as_csv(object_edge)
+    a= .5
+    b= .5
+    theta = 5
+    object_edge = make_object_plane(theta,1000,1000,0,1)
     image = make_image_plane(object_edge,200)
-    save_as_csv(image, "perfect_lsf_theta=2.75.csv")
-    #image_with_lsf,lsf = make_line_spread(image)
-    #noisy_image = add_poisson(image_with_lsf,0.3)
-    plt.imshow(image, interpolation='nearest')
+
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    fig, ax = plt.subplots(2,4, figsize = (16,8))
+    ax[0][0].imshow(object_edge, cmap= cm.gray, interpolation= 'none')
+    ax[0][1].imshow(image, cmap= cm.gray, interpolation= 'none')
+    ax[0][2].imshow(image2, cmap= cm.gray, interpolation= 'none')
+    ax[0][3].plot(dist,intensity, ".-")
+    ax[1][0].plot(freq,mtf)
+
+    '''
+    x= np.linspace(-4,4,25)
+    y= np.linspace(-4,4,25)
+    X,Y = np.meshgrid(x,y)
+    Z = function(X,Y,a,b)
+    
+    ax[1][0] = plt.axes(projection = '3d')
+    ax[1][0].plot_surface(X,Y,Z)
+    '''
     plt.show()
-    #make_mtf(lsf)
+
 main()
