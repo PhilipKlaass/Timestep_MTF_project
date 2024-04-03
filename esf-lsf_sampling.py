@@ -222,9 +222,9 @@ def FFT(lsf_dist,lsf_inten,pixel_size):
 
 
 def main():
-    array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
+    array = get_array("sim0001.csv", 200)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, 0.10035643198967392,119,0.95,3)
+    esf = get_esf(array, -0.0872664625997166,99,0.95,3)
     X2,Y2 =  make_scatter(sorted(esf))
     binned_esf = esf_bin_smooth(X2,Y2, .1)
 

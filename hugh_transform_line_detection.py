@@ -46,7 +46,7 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("perfect_lsf_theta=2.75.csv",200)
+    array1 =get_array("sim0001.csv",200)
     array  = detect_edge_points(array1, threshold =0.35)
 
 
