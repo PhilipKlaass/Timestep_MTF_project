@@ -24,13 +24,13 @@ def make_object_plane(theta, roi_height, roi_width,dark,bright):
     column = roi_width
 
     #array that will hold our simulated pixel values
-    roi = np.zeros((row,column),np.int8)
+    roi = np.zeros((row,column))
 
     #angle that the edge is tilted w.r.t. to vertical is theta
     # x-postion which the edge starts on the top of the roi
     edge_start = int(column/2)
     for y in range(0,row):
-        for x in range(edge_start-2*int(roi_height*np.tan((np.pi/180)*theta)),roi_width):
+        for x in range(column):
             if x < edge_start or x < edge_start-np.tan((np.pi/180)*theta)*y:
                 roi[y,x] = dark
             if x>=edge_start or x >= edge_start-np.tan((np.pi/180)*theta)*y:
@@ -131,11 +131,78 @@ def main():
     theta = 5
     object_edge = make_object_plane(theta,1000,1000,0,1)
     image = make_image_plane(object_edge,200)
-
+    
+    a= 2.5
+    b= 2.5
     psf_kernal = make_kernal(a,b,7)
     dist, intensity = make_lsf(a,b, 5)
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
+    plt.plot(freq,mtf, ".-",label = "a,b = 2.5")
+
+    a= 1
+    b= 1
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    plt.plot(freq,mtf, ".-",label = "a,b = 1")
+
+    a= .5
+    b= .5
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    plt.plot(freq,mtf, ".-",label = "a,b = 0.5")
+
+
+    a= .25
+    b= .25
+    theta = 5
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    plt.plot(freq,mtf, ".-",label = "a,b = 0.25")
+
+    a= .15
+    b= .15
+    theta = 5
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+
+    xf2 = []
+    f = open("mtfx.csv","r")
+    for line in f:
+        line.strip("\n")
+        xf2.append(float(line))
+    yf2 = []
+    f = open("mtf.csv","r")
+    for line in f:
+        line.strip("\n")
+        yf2.append(float(line))
+
+
+    plt.plot(freq,mtf,".-", label = "a,b = 0.15")
+    plt.plot(xf2,yf2,"-.", label ="No Kernel")
+    plt.xlabel("Cycles per pixel")
+    plt.ylabel("MTF")
+    plt.xlim(0,2)
+    plt.title("Simulation Data")
+    plt.text(0.4,0.94,r"$I = \int \int  e^{-ax^2-by^2} $", fontsize = 15)
+    plt.legend()
+    plt.show()
+
+    
+
+
+
+
+
+    '''
     fig, ax = plt.subplots(2,4, figsize = (16,8))
     ax[0][0].imshow(object_edge, cmap= cm.gray, interpolation= 'none')
     ax[0][1].imshow(image, cmap= cm.gray, interpolation= 'none')
@@ -143,7 +210,7 @@ def main():
     ax[0][3].plot(dist,intensity, ".-")
     ax[1][0].plot(freq,mtf)
     save_as_csv(image2, "sim_0001.csv")
-    '''
+    
     x= np.linspace(-4,4,25)
     y= np.linspace(-4,4,25)
     X,Y = np.meshgrid(x,y)
