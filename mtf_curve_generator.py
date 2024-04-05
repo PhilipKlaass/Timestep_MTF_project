@@ -131,6 +131,22 @@ def main():
     theta = 5
     object_edge = make_object_plane(theta,1000,1000,0,1)
     image = make_image_plane(object_edge,200)
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+
+    fig, ax = plt.subplots(2,3, figsize = (12,8))
+
+
+    ax[0][0].imshow(object_edge, cmap= cm.gray, interpolation= 'none')
+    ax[0][0].set_title("Object Plane")
+    ax[0][1].imshow(image, cmap= cm.gray, interpolation= 'none')
+    ax[0][1].set_title("Averaged Array")
+    ax[0][2].imshow(image2, cmap= cm.gray, interpolation= 'none')
+    ax[0][2].set_title("Edge with PSF Applied")
+    ax[1][0].imshow(psf_kernal,cmap= cm.gray, interpolation= 'none')
+    ax[1][0].set_title("PSF Kernel")
     
     a= 2.5
     b= 2.5
@@ -138,7 +154,7 @@ def main():
     dist, intensity = make_lsf(a,b, 5)
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
-    plt.plot(freq,mtf, ".-",label = "a,b = 2.5")
+    ax[1][2].plot(freq,mtf, ".-",label = "a,b = 2.5")
 
     a= 1
     b= 1
@@ -146,7 +162,7 @@ def main():
     dist, intensity = make_lsf(a,b, 5)
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
-    plt.plot(freq,mtf, ".-",label = "a,b = 1")
+    ax[1][2].plot(freq,mtf, ".-",label = "a,b = 1")
 
     a= .5
     b= .5
@@ -154,7 +170,7 @@ def main():
     dist, intensity = make_lsf(a,b, 5)
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
-    plt.plot(freq,mtf, ".-",label = "a,b = 0.5")
+    ax[1][2].plot(freq,mtf, ".-",label = "a,b = 0.5")
 
 
     a= .25
@@ -164,7 +180,7 @@ def main():
     dist, intensity = make_lsf(a,b, 5)
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
-    plt.plot(freq,mtf, ".-",label = "a,b = 0.25")
+    ax[1][2].plot(freq,mtf, ".-",label = "a,b = 0.25")
 
     a= .15
     b= .15
@@ -186,21 +202,63 @@ def main():
         yf2.append(float(line))
 
 
-    plt.plot(freq,mtf,".-", label = "a,b = 0.15")
-    plt.plot(xf2,yf2,"-.", label ="No Kernel")
-    plt.xlabel("Cycles per pixel")
-    plt.ylabel("MTF")
-    plt.xlim(0,2)
-    plt.title("Simulation Data")
-    plt.text(0.4,0.94,r"$I = \int \int  e^{-ax^2-by^2} $", fontsize = 15)
-    plt.legend()
-    plt.show()
+    ax[1][2].plot(freq,mtf,".-", label = "a,b = 0.15")
+    ax[1][2].plot(xf2,yf2,"-.", label ="No Kernel")
+    ax[1][2].set_xlabel("Cycles per pixel")
+    #ax[1][2].set_ylabel("MTF")
+    ax[1][2].set_xlim(0,2)
+    ax[1][2].set_title("Simulation MTF Curves")
+
+    ax[1][2].legend()
+    
 
     
 
 
 
+    a= 2.5
+    b= 2.5
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    ax[1][1].plot(dist, intensity, ".-",label = "a,b = 2.5")
 
+    a= 1
+    b= 1
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    ax[1][1].plot(dist, intensity, ".-",label = "a,b = 1")
+
+    a= .5
+    b= .5
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    ax[1][1].plot(dist, intensity, ".-",label = "a,b = 0.5")
+
+
+    a= .25
+    b= .25
+    theta = 5
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    ax[1][1].plot(dist, intensity, ".-",label = "a,b = 0.25")
+
+    a= .15
+    b= .15
+    theta = 5
+    psf_kernal = make_kernal(a,b,7)
+    dist, intensity = make_lsf(a,b, 5)
+    freq,mtf = fft(a,b,theta)
+    image2 = convolve(psf_kernal,image)
+    ax[1][1].plot(dist, intensity,".-", label = "a,b = 0.15")
+    ax[1][1].set_title("Sample LSF")
 
     '''
     fig, ax = plt.subplots(2,4, figsize = (16,8))
@@ -218,6 +276,7 @@ def main():
     
     ax[1][0] = plt.axes(projection = '3d')
     ax[1][0].plot_surface(X,Y,Z)
+    ,r"$I = \int \int  e^{-ax^2-by^2} $"
     '''
     plt.show()
 
