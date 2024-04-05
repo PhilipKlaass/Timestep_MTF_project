@@ -135,6 +135,8 @@ def main():
     dist, intensity = make_lsf(a,b, 5)
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
+    image2=  cv2.flip(image2, 0)
+    image=  cv2.flip(image, 0)
 
     fig, ax = plt.subplots(2,3, figsize = (12,8))
 
@@ -142,8 +144,12 @@ def main():
     ax[0][0].imshow(object_edge, cmap= cm.gray, interpolation= 'none')
     ax[0][0].set_title("Object Plane")
     ax[0][1].imshow(image, cmap= cm.gray, interpolation= 'none')
+    ax[0][2].set_xlim(80,120)
+    ax[0][2].set_ylim(80,120)
     ax[0][1].set_title("Averaged Array")
     ax[0][2].imshow(image2, cmap= cm.gray, interpolation= 'none')
+    ax[0][1].set_xlim(80,120)
+    ax[0][1].set_ylim(80,120)
     ax[0][2].set_title("Edge with PSF Applied")
     ax[1][0].imshow(psf_kernal,cmap= cm.gray, interpolation= 'none')
     ax[1][0].set_title("PSF Kernel")
