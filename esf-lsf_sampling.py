@@ -222,9 +222,9 @@ def FFT(lsf_dist,lsf_inten,pixel_size):
 
 
 def main():
-    array = get_array("sim0001.csv", 200)
+    array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
     #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, -0.0872664625997166,99,0.95,3)
+    esf = get_esf(array, 0.10035643198967392, 119.0,0.95,3)
     X2,Y2 =  make_scatter(sorted(esf))
     binned_esf = esf_bin_smooth(X2,Y2, .1)
 
@@ -239,13 +239,13 @@ def main():
     plt.style.use(["science", "notebook"])
     fig , ax = plt.subplots(2,3, figsize = (12,8))
     ax[0][0].plot(X2,Y2,".", ms= 2)
-    ax[0][0].set_title("Oversampled ESF/ERF")
+    ax[0][0].set_title("Oversampled ERF")
 
     ax[0][1].plot(X_avgfilter,Y_avgfilter, ".-", lw= 1, color = "g", label ="average")
     ax[0][1].plot(X_median,Y_median, ".-", lw= .5, color = "red", label = "median")
     ax[0][1].plot(X_binned,Y_binned, ".-", lw= .5, label = 'binned')
     ax[0][1].legend(fontsize = 12)
-    ax[0][1].set_title("Binned into 0.1 pixel width")
+    ax[0][1].set_title("Initial Soothing Applied")
 
 
 
@@ -256,7 +256,7 @@ def main():
     ax[0][2].set_title("Peicewise Cubic Interpolation")
 
     ax[1][0].plot(X_interp,Yhat,'.', color = 'r',  lw = 1.5)
-    ax[1][0].set_title("Savitsky-Golay filter applied")
+    ax[1][0].set_title("Savitsky-Golay Filter Applied")
     smoothing.append(("interpolated+savgol", X_interp,Yhat))
 
     
@@ -267,12 +267,15 @@ def main():
         mdy1 = max(dy1)
         for i in range(len(dy1)):
             dy1[i] = dy1[i]/mdy1
-        ax[1][1].plot(dx1,dy1, ".-", label = label1)
+        if label1 == "binned":
+            ax[1][1].plot(dx1,dy1, ".", label = label1)
+        else:
+            ax[1][1].plot(dx1,dy1, ".-", label = label1)
         #ax[1][1].plot(X_interp,dy,"b")
 
 
 
-        ax[1][1].set_title("Derivative, LSF")
+        ax[1][1].set_title("LSF")
 
         xf1,yf1 = FFT(X_interp,dy1,2.2)
         ax[1][2].plot(xf1,yf1,'.-', lw= 0.5, label = label1)
