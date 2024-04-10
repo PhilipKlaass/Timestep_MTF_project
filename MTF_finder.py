@@ -329,11 +329,11 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
             if 0<= y_sample1<= len(array) and 0<= x_sample1<= len(array[0]): 
                 intensity1 = array[floor(y_sample1)][floor(x_sample1)]
                 dist1 = ((x_sample1-x_edge)/(np.abs(x_sample1-x_edge)))*((y_edge-y_sample1)**2+(x_edge-x_sample1)**2)**0.5
-                esf.append((dist1,intensity1))
+                esf.append((dist1-1,intensity1))
             if 0<= y_sample2<= len(array) and 0<= x_sample2<= len(array[0]):
                 dist2 = ((x_sample2-x_edge)/(np.abs(x_sample2-x_edge)))*((y_edge-y_sample2)**2+(x_edge-x_sample2)**2)**0.5
                 intensity2 =  array[floor(y_sample2)][floor(x_sample2)]
-                esf.append((dist2,intensity2))
+                esf.append((dist2-1,intensity2))
     return esf
 
 
@@ -350,9 +350,10 @@ Variable:
                distances over which intensity values will be averaged
 """
 def esf_bin_smooth(esf_dist,esf_intensity,binsize):
-    minimum_dist = esf_dist[0]
+    minimum_dist = min(esf_dist)
+    distance_range = max(esf_dist)-min(esf_dist)
     binned_esf= []
-    number_of_bins = np.abs(int((2*minimum_dist)/binsize))
+    number_of_bins = np.abs(int((distance_range)/binsize))
     for i in range(number_of_bins):
         tot_intensity = 0
         k = 0
@@ -470,17 +471,10 @@ def FFT(lsf_dist,lsf_inten):
 
 
 
-def main():
-    a= .1
-    b= .5
-    theta = 5
-    object_edge = make_object_plane(theta,1000,1000,0,1)
-    image = make_image_plane(object_edge,200)
-    psf_kernal = make_kernal(a,b,7)
-    dist, intensity = make_lsf(a,b, 5)
-    freq,mtf = fft(a,b,theta)
-    array= convolve(psf_kernal,image)
-    esf = get_esf(array, -0.087266, 100,0.95,3)
+def esf_figure():
+    array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
+    #sampling_frequency in samples per pixel pitch
+    esf = get_esf(array, 0.10035643198967392, 119.0,0.95,3)
     X2,Y2 =  make_scatter(sorted(esf))
     binned_esf = esf_bin_smooth(X2,Y2, .1)
 
@@ -489,18 +483,19 @@ def main():
     X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
 
     X_median, Y_median, median = median_filter(average,13)
+    smoothing = [("binned",X_binned,Y_binned), ("averaaged",X_avgfilter,Y_avgfilter), ("median",X_median,Y_median)]
+    fig, ax = plt.subplots(1,1)
+    ax.plot(X2,Y2,".", label = "Sampled ERF")
+    ax.plot(X_binned , Y_binned,".",label = "Binned into 0.1p width")
+    ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter")
+    ax.plot(X_median, Y_median,"*-",label = "Median Filter")
     X_interp = np.linspace(min(X_median), max(X_median),1000)
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,51,2,1)
-    xf1,yf1 = FFT(X_interp,Yhat)
-
-
-
-
-    fig, ax = plt.subplots(1,2)
-    ax[0].plot(freq,mtf)
-    ax[0].plot(xf1,yf1)
-    ax[1].plot(dist,intensity)
-    ax[1].plot(X_interp,Yhat)
+    Yhat = scipy.signal.savgol_filter(Y_interp,51,2,0)
+    ax.plot(X_interp,Yhat,label = "Savistky-Golay Filter", color="black",lw = 2.5)
+    plt.title("Oversampled and Smoothed ERF", fontsize = 16)
+    plt.xlabel("Distance from Edge [pixels]", fontsize = 16)
+    plt.ylabel("Normalized Intensity", fontsize = 16)
+    plt.legend()
     plt.show()
-main()
+esf_figure()

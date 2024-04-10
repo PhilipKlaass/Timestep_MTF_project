@@ -64,7 +64,7 @@ def make_image_plane(object_plane, size):
 
 
 def make_kernal(xscaling_factor, yscaling_factor, kernel_size):
-    f = lambda x,y: np.exp(-xscaling_factor*x**2-yscaling_factor*y**2)
+    f = lambda x,y: np.exp(-xscaling_factor*x**2-yscaling_factor*y**2)*np.cos(xscaling_factor*yscaling_factor**1/2*(x**2+y**2))**2
     kernal = np.zeros((kernel_size,kernel_size))
     total = dblquad(f, kernel_size/2,-kernel_size/2,kernel_size/2,-kernel_size/2)[0]
     #in general total is more accurate, however, total and total1 are often equivalent
@@ -152,7 +152,7 @@ def function(x,y,a,b):
     return np.exp(-a*x**2-b*y**2)
 
 def main():
-    a= .1
+    a= .5
     b= .5
     theta = 5
     object_edge = make_object_plane(theta,1000,1000,0,1)
@@ -223,20 +223,20 @@ def main():
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
 
-    xf2 = []
-    f = open("mtfx.csv","r")
-    for line in f:
-        line.strip("\n")
-        xf2.append(float(line))
-    yf2 = []
-    f = open("mtf.csv","r")
-    for line in f:
-        line.strip("\n")
-        yf2.append(float(line))
+    #xf2 = []
+    #f = open("mtfx.csv","r")
+    #for line in f:
+    #    line.strip("\n")
+    #    xf2.append(float(line))
+    #yf2 = []
+    #f = open("mtf.csv","r")
+    #for line in f:
+    #    line.strip("\n")
+    #    yf2.append(float(line))
 
 
     ax[1][2].plot(freq,mtf,".-", label = "a,b = 0.15")
-    ax[1][2].plot(xf2,yf2,"-.", label ="No Kernel")
+    #ax[1][2].plot(xf2,yf2,"-.", label ="No Kernel")
     ax[1][2].set_xlabel("Cycles per pixel")
     #ax[1][2].set_ylabel("MTF")
     ax[1][2].set_xlim(0,2)

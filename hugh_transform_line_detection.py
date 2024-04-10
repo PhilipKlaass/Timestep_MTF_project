@@ -30,11 +30,11 @@ def get_array(filename, size):
 
 def detect_edge_points(array, threshold):
     m = len(array[0])
-    light_value = array[0][m-1]
+    light_value = 0.9 #array[0][m-1]
     output_image = np.zeros((len(array),len(array[0])))
     for j in range(len(array)):
-        for i in range(m-1,0,-1):
-            if (0.5-threshold)*light_value <=  array[j][i]<= (0.5+threshold)*light_value:
+        for i in range(len(array)):
+            if (0.5-threshold)*light_value <=  array[j][i] and array[j][i] <= (0.5+threshold)*light_value:
                 output_image[j][i] =1
 
 
@@ -46,14 +46,14 @@ def detect_edge_points(array, threshold):
 
 
 def main():
-    array1 =get_array("image0008_corrected_(100,300)-(50,250).csv",200)
-    array  = detect_edge_points(array1, threshold =0.15)
+    array1 =get_array("razor.csv",200)
+    array  = detect_edge_points(array1, threshold =0.25)
 
 
 
     angles = np.linspace(-np.pi/2, np.pi/2,720, endpoint=False)
     h,theta, d = hough_line(array, theta= angles)
-    fig, ax = plt.subplots(1,3,figsize = (10,5))
+    fig, ax = plt.subplots(1,4,figsize = (10,5))
 
 
     ax[0].imshow(array1, cmap= cm.gray, interpolation= 'none')
@@ -61,11 +61,11 @@ def main():
     ax[0].set_xlim(0,len(array1))
     ax[0].set_ylim(0,len(array1))
     #ax[0].set_axis_off()
-    '''
-    ax[0][1].imshow(array, cmap=cm.gray)
-    ax[0][1].set_title('Input image with edge points identified')
-    ax[0][1].set_axis_off()
-    '''
+
+    ax[3].imshow(array, cmap=cm.gray)
+    ax[3].set_title('Input image with edge points identified')
+    ax[3].set_axis_off()
+
     angle_step = 0.5 * np.diff(theta).mean()
     d_step = 0.5 * np.diff(d).mean()
     bounds = [np.rad2deg(theta[0] - angle_step),
@@ -84,17 +84,19 @@ def main():
     ax[2].set_title('Detected lines')
 
     lines = []
-    for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = 80)):
+    for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = 100)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ax[2].axline((x0, y0), slope=np.tan(angle + np.pi/2))
         lines.append((_,angle,dist))
     print(lines)
     pltlines=[]
     for i in lines:
-        x = np.linspace(0,len(array), 250)
-        y= (i[2]-x*np.cos(i[1])) / np.sin(i[1])
-        ax[0].plot(x,y, color = "r", lw= 1)
-        pltlines.append((x,y))
+        if 110>i[2] >100:
+            x = np.linspace(0,len(array), 250)
+            y= (i[2]-x*np.cos(i[1])) / np.sin(i[1])
+            ax[0].plot(x,y, color = "r", lw= 1)
+            pltlines.append((x,y))
+            print(i)
     plt.tight_layout()
     plt.show()
 
