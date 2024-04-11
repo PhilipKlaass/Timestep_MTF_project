@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 from scipy.integrate import dblquad
 from matplotlib import pyplot as plt
 from scipy.integrate import quad
@@ -290,6 +291,9 @@ def main():
     dist, intensity = make_lsf(a,b, 5)
     freq,mtf = fft(a,b,theta)
     image2 = convolve(psf_kernal,image)
+    yf = np.abs(scipy.fft.fft(intensity))
+    ax[1][2].plot(freq,yf)
+
     ax[1][1].plot(dist, intensity,".-", label = "a,b = 0.15")
     ax[1][1].set_title("Sample LSF")
 

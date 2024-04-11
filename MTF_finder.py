@@ -177,7 +177,7 @@ def add_poisson(edge,density):
 
 
 def make_lsf(theta,xscaling_factor, yscaling_factor):
-    dist =  np.linspace(-5,5, 100)
+    dist =  np.linspace(-11.94,9.95, 1000)
     intensity = []
     for i in dist:
         intensity.append( np.exp(i**2*(-yscaling_factor)-xscaling_factor*(np.tan(np.pi/180 *theta))**(2)))
@@ -293,7 +293,10 @@ def hough_transform(array, threshold1, plot):
         ##plt.plot((x0, y0), slope=np.tan(angle + np.pi/2))
         lines.append((angle,dist))
     if plot==True:
+        plt.imshow(array)
+        plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
         plt.show()
+    print(lines)
     return lines
 
 
@@ -426,6 +429,9 @@ def get_derivative(x,y):
     x_out = np.delete(x_out,0)
     y_out = np.delete(y_out,len(y_out)-1)
     x_out = np.delete(x_out,len(x_out)-1)
+    minten = max(y_out)
+    for i in range(len(y_out)):
+        y_out[i]=y_out[i]/minten
     return x_out,y_out
 
 
@@ -449,7 +455,7 @@ def FFT(lsf_dist,lsf_inten):
     X1 = scipy.fft.fft(lsf_inten)
     X =np.abs(X1) #modulus of the FFT
 
-    m = max(X)
+    m = X[0]
     for i in range(len(X)):
         X[i]= X[i]/m
 
@@ -467,9 +473,52 @@ def FFT(lsf_dist,lsf_inten):
 
 
 
+def make_sims():
+    a=0.25
+    b=0.25
+    theta = 5
+    object = make_object_plane(theta, 1000,1000, 0,1)
+    averaged = make_image_plane(object, 200)
+    out=[]
+    for i in range(0,3):
+        a+=i*0.25
+        b+=i*0.25
+        kernel = make_kernal(a,b,9)
+        image = convolve(kernel,averaged)
+        dist, intensity = make_lsf(a,b, 5)
+        freq,mtf= FFT(dist, intensity)
+        out.append((image, freq,mtf, "a-" +str(a)))
+        #plt.plot(freq,mtf)
+        #plt.plot(dist,intensity)
+        #plt.show()
+    return out
+make_sims()
 
+def mtf_list(list):
+    print(len(list))
+    out = []
+    for i in list:
+        line = [(-0.09599310885968815, 100.0)]
+        erf = get_esf(i[0], line[0][0], line[0][1], 0.95,3)
+        X2,Y2 =  make_scatter(sorted(erf))
+        binned_esf = esf_bin_smooth(X2,Y2, .1)
+        X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
+        X_median, Y_median, median = median_filter(average,13)
+        X_interp = np.linspace(min(X_median), max(X_median),1000)
+        print(max(X_interp))
+        Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
+        Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
+        dx,dy = get_derivative(X_interp, Yhat)
+        fx,fy = FFT(dx,dy)
+        out.append((i[1],i[2], "sim"+i[3], fx,fy, "real "+ i[3]))
+    
+    for i in out:
+        plt.plot(i[0],i[1],label = i[2])
+        plt.plot(i[3],i[4],label = i[5])
+    plt.legend()
+    plt.show()
 
-
+mtf_list(make_sims())
 
 def esf_figure():
     array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
@@ -484,18 +533,87 @@ def esf_figure():
 
     X_median, Y_median, median = median_filter(average,13)
     smoothing = [("binned",X_binned,Y_binned), ("averaaged",X_avgfilter,Y_avgfilter), ("median",X_median,Y_median)]
-    fig, ax = plt.subplots(1,1)
-    ax.plot(X2,Y2,".", label = "Sampled ERF")
-    ax.plot(X_binned , Y_binned,".",label = "Binned into 0.1p width")
-    ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter")
-    ax.plot(X_median, Y_median,"*-",label = "Median Filter")
     X_interp = np.linspace(min(X_median), max(X_median),1000)
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,51,2,0)
+    Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
+
+    fig, ax = plt.subplots(1,1,figsize = (10,10))
+
+    ax.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey")
+    ax.plot(X_binned , Y_binned,".",label = "Binned into 0.1p width", color="midnightblue")
+    ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 10)
+    ax.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms = 10)    
     ax.plot(X_interp,Yhat,label = "Savistky-Golay Filter", color="black",lw = 2.5)
+
     plt.title("Oversampled and Smoothed ERF", fontsize = 16)
     plt.xlabel("Distance from Edge [pixels]", fontsize = 16)
     plt.ylabel("Normalized Intensity", fontsize = 16)
-    plt.legend()
+    plt.legend(fontsize = 16)
     plt.show()
-esf_figure()
+
+
+def lsf_figure(x):
+    array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
+    #sampling_frequency in samples per pixel pitch
+    esf = get_esf(array, 0.10035643198967392, 119.0,0.95,3)
+    X2,Y2 =  make_scatter(sorted(esf))
+    
+    binned_esf = esf_bin_smooth(X2,Y2, .1)
+
+    X_binned , Y_binned = make_scatter(binned_esf)
+    
+
+    X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
+    
+
+    X_median, Y_median, median = median_filter(average,13)
+    
+
+    smoothing = [("binned",X_binned,Y_binned), ("averaaged",X_avgfilter,Y_avgfilter), ("median",X_median,Y_median)]
+    X_interp = np.linspace(min(X_median), max(X_median),1000)
+    Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
+    Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
+
+    X2,Y2 = get_derivative(X2,Y2)
+    X_binned , Y_binned = get_derivative(X_binned , Y_binned)
+    X_avgfilter,Y_avgfilter=  get_derivative(X_avgfilter,Y_avgfilter)
+    X_median, Y_median = get_derivative(X_median, Y_median,)
+    X_interp,Yhat = get_derivative(X_interp,Yhat)
+    if x== True:
+        fig, ax = plt.subplots(1,1,figsize = (10,10))
+
+        ax.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey")
+        ax.plot(X_binned , Y_binned,".",label = "Binned into 0.1p width", color="midnightblue")
+        ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 10)
+        ax.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms = 10)    
+        ax.plot(X_interp,Yhat,label = "Savistky-Golay Filter", color="black",lw = 2.5)
+
+        plt.title("LSFs with and without Smoothing", fontsize = 16)
+        plt.xlabel("Distance from Edge [pixels]", fontsize = 16)
+        plt.ylabel("Normalized Intensity change per Pixel", fontsize = 16)
+        plt.legend(fontsize = 16)
+        plt.show()
+
+    return [(X2,Y2,"Sampled" ),(X_binned , Y_binned, "Binned"),(X_avgfilter,Y_avgfilter, "Average filter"),(X_median, Y_median, "Median Filter"),(X_interp,Yhat, "Savistky-Golay Filter")]
+
+
+def mtf_figure(lsf_list):
+    fig, ax = plt.subplots(1,1, figsize = (8,8))
+    mtf_list = []
+    for i in lsf_list:
+        (xf,yf) = FFT(i[0],i[1])
+        mtf_list.append((xf,yf, i[2]))
+    colors = ["slategrey", "midnightblue","forestgreen","lightseagreen","black"] 
+    n=0
+    for i in mtf_list:
+        if i[2]==  "Savistky-Golay Filter":
+            ax.plot(i[0],i[1], ".-" , label = i[2], color = colors[n], lw = 3)
+        else:
+            ax.plot(i[0],i[1], ".-" , label = i[2], color = colors[n])
+        n+=1
+    plt.legend()
+    plt.title("Simulated and Real MTFs ")
+    plt.xlim(0,2)
+    plt.ylim(0,1)
+    plt.show()
+#mtf_figure(lsf_figure(False))
