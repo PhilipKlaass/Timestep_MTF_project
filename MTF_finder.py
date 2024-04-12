@@ -180,7 +180,7 @@ def make_lsf(theta,xscaling_factor, yscaling_factor):
     dist =  np.linspace(-11.94,9.95, 1000)
     intensity = []
     for i in dist:
-        intensity.append( np.exp(i**2*(-yscaling_factor)-xscaling_factor*(np.tan(np.pi/180 *theta))**(2)))
+        intensity.append( np.exp(i**2*-xscaling_factor))
     m_inten = max(intensity)
     for i in range(len(intensity)):
         intensity[i]= intensity[i]/m_inten
@@ -474,15 +474,15 @@ def FFT(lsf_dist,lsf_inten):
 
 
 def make_sims():
-    a=0.25
-    b=0.25
+    a=0.1
+    b=0.1
     theta = 5
     object = make_object_plane(theta, 1000,1000, 0,1)
     averaged = make_image_plane(object, 200)
     out=[]
     for i in range(0,3):
-        a+=i*0.25
-        b+=i*0.25
+        a+=i*0.05
+        b+=i*0.05
         kernel = make_kernal(a,b,9)
         image = convolve(kernel,averaged)
         dist, intensity = make_lsf(a,b, 5)
@@ -510,12 +510,13 @@ def mtf_list(list):
         Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
         dx,dy = get_derivative(X_interp, Yhat)
         fx,fy = FFT(dx,dy)
-        out.append((i[1],i[2], "sim"+i[3], fx,fy, "real "+ i[3]))
+        out.append((i[1],i[2], "Analytical "+i[3], fx,fy, "Experimental "+ i[3]))
     
     for i in out:
         plt.plot(i[0],i[1],label = i[2])
         plt.plot(i[3],i[4],label = i[5])
     plt.legend()
+    plt.xlim(0,1)
     plt.show()
 
 mtf_list(make_sims())
