@@ -14,6 +14,10 @@ from scipy.integrate import dblquad
 from scipy.integrate import quad
 from matplotlib import cm
 import cv2
+from pylab import rcParams
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 """
@@ -480,14 +484,14 @@ def make_sims():
     object = make_object_plane(theta, 1000,1000, 0,1)
     averaged = make_image_plane(object, 200)
     out=[]
-    for i in range(0,3):
+    for i in range(0,1):
         a+=i*0.05
         b+=i*0.05
         kernel = make_kernal(a,b,9)
         image = convolve(kernel,averaged)
         dist, intensity = make_lsf(a,b, 5)
         freq,mtf= FFT(dist, intensity)
-        out.append((image, freq,mtf, "a-" +str(a)))
+        out.append((image, freq,mtf, "a = " +str(a)))
         #plt.plot(freq,mtf)
         #plt.plot(dist,intensity)
         #plt.show()
@@ -505,21 +509,43 @@ def mtf_list(list):
         X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
         X_median, Y_median, median = median_filter(average,13)
         X_interp = np.linspace(min(X_median), max(X_median),1000)
-        print(max(X_interp))
         Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
         Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
         dx,dy = get_derivative(X_interp, Yhat)
         fx,fy = FFT(dx,dy)
-        out.append((i[1],i[2], "Analytical "+i[3], fx,fy, "Experimental "+ i[3]))
+        out.append((i[1],i[2], "Analytical from Simulation", fx,fy, "Sampled from Simulation"))
     
-    for i in out:
-        plt.plot(i[0],i[1],label = i[2])
-        plt.plot(i[3],i[4],label = i[5])
-    plt.legend()
-    plt.xlim(0,1)
-    plt.show()
 
-mtf_list(make_sims())
+    fig = plt.figure(figsize = (12,9), dpi = 600)
+    #rcParams['figure.figsize'] = 9,9
+    #rcParams['figure.dpi'] = 600
+    for i in out:
+        plt.plot(i[0],i[1],"s--",label = i[2], color ="slategrey")
+        plt.plot(i[3],i[4],"s--",label = i[5], color ="lightseagreen")
+    diff= []
+    tot = 0
+    for i in range(0,20):
+        diff.append(np.abs( out[0][1][i] - out[0][4][i]))
+        tot += np.abs( out[0][1][i] - out[0][4][i])
+    print(max(diff))
+    av = tot/len(diff)
+    sum = 0
+    for i in diff:
+        sum += (i - av)**2
+    print((sum/len(diff))**0.5)
+
+    real_lsf= lsf_figure(x =False)
+    fx, fy = FFT(real_lsf[4][0],real_lsf[4][1])
+    font = 36
+    plt.plot(fx,fy,"s-", label = "Real Image", color = "black")
+    plt.legend(fontsize =.75*font)
+    plt.xlim(0,1)
+    plt.title("MTFs from Simulations and Real Images", fontsize = font)
+    plt.xlabel('Spatial Frequency [cycles/pixel]',fontsize = font)
+    plt.ylabel("Contrast [%]",fontsize = font)
+    plt.savefig("MTF.png", dpi = 600)
+
+
 
 def esf_figure():
     array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
@@ -538,19 +564,36 @@ def esf_figure():
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
     Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
 
-    fig, ax = plt.subplots(1,1,figsize = (10,10))
+    fig, ax = plt.subplots(figsize = (10,10))
 
     ax.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey")
-    ax.plot(X_binned , Y_binned,".",label = "Binned into 0.1p width", color="midnightblue")
+    ax.plot(X_binned , Y_binned,".",label = "Binned ERF", color="midnightblue")
     ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 10)
     ax.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms = 10)    
-    ax.plot(X_interp,Yhat,label = "Savistky-Golay Filter", color="black",lw = 2.5)
+    ax.plot(X_interp,Yhat,label = "Sav.-Gol. Filter", color="black",lw = 2.5)
 
-    plt.title("Oversampled and Smoothed ERF", fontsize = 16)
-    plt.xlabel("Distance from Edge [pixels]", fontsize = 16)
-    plt.ylabel("Normalized Intensity", fontsize = 16)
-    plt.legend(fontsize = 16)
-    plt.show()
+    font= 36
+    plt.title("Oversampled and Smoothed ERF", fontsize = font)
+    plt.xlabel("Distance from Edge [pixels]", fontsize = font)
+    plt.ylabel("Normalized Intensity", fontsize = font)
+    plt.legend(fontsize = 0.7*font, loc = "upper left")
+
+    axins = inset_axes(ax,  loc = "lower right", height = 3.5, width = 3.5) # zoom = 6
+    axins.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey",ms = 20)
+    axins.plot(X_binned , Y_binned,".",label = "Binned ERF", color="midnightblue",ms = 20)
+    axins.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 20)
+    axins.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms =20)    
+    axins.plot(X_interp,Yhat,label = "Sav.-Gol. Filter", color="black",lw =5.5)
+    x1, x2, y1, y2 = 2.6,3.6,0.875,0.98
+    axins.set_xlim(x1, x2)
+    axins.set_ylim(y1, y2)
+    
+    plt.xticks(visible=False)
+    plt.yticks(visible=False)
+    mark_inset(ax, axins, loc1=1, loc2=2, fc="none", ec="0.5")
+    #plt.draw()
+    #plt.show()
+    plt.savefig("ERF.png", dpi = 600)
 
 
 def lsf_figure(x):
@@ -583,19 +626,21 @@ def lsf_figure(x):
     if x== True:
         fig, ax = plt.subplots(1,1,figsize = (10,10))
 
-        ax.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey")
-        ax.plot(X_binned , Y_binned,".",label = "Binned into 0.1p width", color="midnightblue")
-        ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 10)
-        ax.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms = 10)    
-        ax.plot(X_interp,Yhat,label = "Savistky-Golay Filter", color="black",lw = 2.5)
+        ax.plot(X2,Y2,".", label = "Sampled", color="slategrey")
+        ax.plot(X_binned , Y_binned,".",label = "Binned", color="midnightblue")
+        ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged", color="forestgreen",ms = 10)
+        ax.plot(X_median, Y_median,"*-",label = "Median", color="lightseagreen", ms = 10)    
+        ax.plot(X_interp,Yhat,label = "Sav.-Gol.", color="black",lw = 2.5)
 
-        plt.title("LSFs with and without Smoothing", fontsize = 16)
-        plt.xlabel("Distance from Edge [pixels]", fontsize = 16)
-        plt.ylabel("Normalized Intensity change per Pixel", fontsize = 16)
-        plt.legend(fontsize = 16)
-        plt.show()
+        font = 36
+        plt.title("LSFs with and without Smoothing", fontsize = font)
+        plt.xlabel("Distance from Edge [pixels]", fontsize = font)
+        plt.ylabel("Normalized Intensity per Pixel", fontsize = font)
+        plt.legend(fontsize = 0.75*font, loc = "lower left")
+        plt.savefig("LSF.png", dpi = 600)
 
-    return [(X2,Y2,"Sampled" ),(X_binned , Y_binned, "Binned"),(X_avgfilter,Y_avgfilter, "Average filter"),(X_median, Y_median, "Median Filter"),(X_interp,Yhat, "Savistky-Golay Filter")]
+    return [(X2,Y2,"Sampled" ),(X_binned , Y_binned, "Binned"),(X_avgfilter,Y_avgfilter, "Average filter"),
+            (X_median, Y_median, "Median Filter"),(X_interp,Yhat, "Savistky-Golay Filter")]
 
 
 def mtf_figure(lsf_list):
@@ -618,3 +663,6 @@ def mtf_figure(lsf_list):
     plt.ylim(0,1)
     plt.show()
 #mtf_figure(lsf_figure(False))
+def main():
+    mtf_list(make_sims())
+main()
