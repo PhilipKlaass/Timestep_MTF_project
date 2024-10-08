@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from math import floor
 import scipy
-import scienceplots
 import os
 import os.path
 from skimage.transform import hough_line, hough_line_peaks
@@ -13,7 +12,7 @@ import skimage as ski
 from scipy.integrate import dblquad
 from scipy.integrate import quad
 from matplotlib import cm
-import cv2
+import cv2 as cv
 from pylab import rcParams
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
@@ -26,17 +25,56 @@ Utilities-----------------------------------------------------------------------
 """
 script_dir= os.path.dirname(__file__)
 
-def open_images(*filename):
-    out = ()
-    for i in filename:
-        rel_path = "images/" + i
-        abs_file_path = os.path.join(script_dir,rel_path)
-        img = ski.io.imread(abs_file_path)
-        img_1 =img[100:300]
-        img_roi = np.transpose(img_1)
-        img_roi = img_roi[50:250]
-        out = out + (img_roi,)
-    return out
+
+def open_images(filename, roi_select = 1, row0=1,row1=1,col0=1,col1=1):
+    """
+    
+
+    Parameters
+    ----------
+    filename : string
+        Name of image in folder, \images\filename.
+    roi_select: booleen
+        Toggles the user roi selection.
+    row0, row1:
+    
+    Returns
+    -------
+    TYPE
+        Numpy array of the intended ROI rotated 90 degrees ccw.
+
+    """
+    rel_path = r"images/" + filename
+    abs_file_path = os.path.join(script_dir,rel_path)
+    image_array = np.rot90(np.array(cv.imread(abs_file_path,flags = 2 )))
+    out = False
+    if roi_select== False:
+        return image_array[row0:row1,col0:col1],[row0,row1],[col0,col1]
+    while out == False:
+        plt.imshow(image_array)
+        plt.show()
+        roi_coords = input("Enter the coordinates for the wanted ROI.\nE.g. 0:100,0:100\n")
+        coords_str = roi_coords.split(',')
+        roi_rows = [int(i) for i in coords_str[0].split(':')]
+        roi_cols = [int(i) for i in coords_str[1].split(':')]
+        
+        if roi_rows[1]-roi_rows[0] == roi_cols[1]-roi_cols[0]:
+            plt.imshow(
+                        image_array[roi_rows[0]:roi_rows[1] ,
+                                    roi_cols[0]:roi_cols[1]]  )
+            plt.show()
+            
+            confirmation = input('(Y/N) Is this the intended ROI?\n')
+            
+            if confirmation == 'Y':
+                out = True
+        else:
+            print('Please enter a square ROI.')
+        
+    return image_array[roi_rows[0]:roi_rows[1] , roi_cols[0]:roi_cols[1]],roi_rows,roi_cols
+
+
+
 
 def save_as_csv(array,filename):
     f = open(filename,'a')
@@ -162,7 +200,7 @@ def convolve(kernel, image):
     (kH, kW) = kernel.shape[:2]
 
     pad = (kW-1)//2
-    image = cv2.copyMakeBorder(image, pad,pad,pad,pad,cv2.BORDER_REPLICATE)
+    image = cv.copyMakeBorder(image, pad,pad,pad,pad,cv.BORDER_REPLICATE)
     output = np.zeros((iH,iW))
     for j in np.arange(pad,iH+pad):
         for i in np.arange(pad,iW+pad):
@@ -246,23 +284,16 @@ ROI selection ------------------------------------------------------------------
 """
 
 def flatfield_correction(light, dark, image):
-    size = len(image)
-    light_dark = np.zeros((size,size))
-    image_dark = np.zeros((size,size))
-    tot = 0
-    for i in range(size):
-        for j in range(size):
-            tot+= light[i][j]-dark[i][j]
-            light_dark[i][j] = light[i][j]-dark[i][j]
-            image_dark[i][j] = image[i][j]- dark[i][j]
-    m = tot/(size**2)
-    image_dark*m
-    corrected_image = np.zeros((size,size))
-    for i in range(size):
-        for j in range(size):
-            corrected_image[i][j] = image_dark[i][j]/light_dark[i][j]
-    return corrected_image
-
+    
+    N = len(image)
+    avg_light_dark = np.sum(light-dark)/ N**2
+    corrected_image = avg_light_dark*(image - dark)/(light-dark)
+    
+    max_light = np.array(corrected_image).max()
+    
+    normalized_cor_image = corrected_image/max_light
+    
+    return normalized_cor_image
 
 """
 Edge Detection------------------------------------------------------------------------------------------------------
@@ -270,20 +301,52 @@ Edge Detection------------------------------------------------------------------
 """
 
 def detect_edge_points(array, threshold):
-    m = len(array[0])
-    light_value = array[0][m-1]
-    output_image = np.zeros((len(array),len(array[0])))
+    '''
+    
+
+    Parameters
+    ----------
+    array : numpy array
+        DESCRIPTION.
+    threshold : float
+        A float between 0 and 0.5, determines the which points are chosen as
+        edges.
+
+    Returns
+    -------
+    edge_points : numpy array
+        Array of zeros with edgepoints set to a value of 1.
+
+    '''
+    light_value = np.array(array).max()
+    edge_points = np.zeros((len(array),len(array[0])))
     for j in range(len(array)):
-        for i in range(m-1,0,-1):
+        for i in range(len(array)-1,0,-1):
             if (0.5-threshold)*light_value <=  array[j][i]<= (0.5+threshold)*light_value:
-                output_image[j][i] =1
+                edge_points[j][i] =1
 
-
-
-
-    return output_image
+    return edge_points
 
 def hough_transform(array, threshold1, plot):
+    '''
+    
+
+    Parameters
+    ----------
+    array : numpy array
+        Array with edge points set to weight of 1 ande everything else set to 0.
+    threshold1 : integer
+        Determines which lines are suitable candidates. The number of edge 
+        points intersected by the line is the line strength.
+    plot : Booleen
+        Toggles plotting
+
+    Returns
+    -------
+    lines : List of tuples
+        List of tuples for possible lines, formatted as [(radius,theta),...]
+
+    '''
     angles = np.linspace(-np.pi/2, np.pi/2,720, endpoint=False)
     h,theta, d = hough_line(array, theta= angles)
     angle_step = 0.5 * np.diff(theta).mean()
@@ -300,31 +363,46 @@ def hough_transform(array, threshold1, plot):
         plt.imshow(array)
         plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
         plt.show()
+    print("Lines:\n")
     print(lines)
     return lines
 
 
 
-"""
-Summary:
-        Consider the array in R2, create a number lines perpendicular to the 
-        edge and a number(sampling_number) of vertical lines whose spacing is 
-        determined by the sampling_frequency. For each intersection of the 
-        vertical and perpendicular lines record the distance from the edge and
-        the intensity of the pixel in which the intersection ocurred.
-
-Variables:
-    - array: image
-    - theta and r: definition of our edge r= xcos(theta)+ysin(theta)
-    - smapling_frequency: samples per pixel width
-    - sample_number: number of samples taken on each side of edge 
-"""
 
 def get_esf(array, theta, r, sampling_frequency, sample_number):
-    theta = -theta #change sign because the array indexes downwards and the math
+    '''
+
+    Parameters
+    ----------
+    array : numpy array
+        image array
+        
+    theta : float
+        angle used to describe edge line
+        
+    r : float
+        radius used to describe edge line
+        
+    sampling_frequency : float
+        samples per pixel width
+        
+    sample_number : integer
+        number of samples taken on each side of edge 
+
+    Returns
+    -------
+    esf_x : list
+        DESCRIPTION.
+    esf_y : list
+        DESCRIPTION.
+
+    '''
+    theta = theta #change sign because the array indexes downwards and the math
                    #is easier when we consider our edge in the 1st quadrant
     x_intercept = r/np.cos(theta) - len(array)*0.5*np.tan(theta)
-    esf = []
+    esf_x = []
+    esf_y = []
     for y_edge in range(0,len(array)):
         y_edge = y_edge + 0.5 #change for spacing of perp lines, aka nbr of data points
         x_edge = -y_edge*np.tan(theta)+r/np.cos(theta)
@@ -336,12 +414,15 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
             if 0<= y_sample1<= len(array) and 0<= x_sample1<= len(array[0]): 
                 intensity1 = array[floor(y_sample1)][floor(x_sample1)]
                 dist1 = ((x_sample1-x_edge)/(np.abs(x_sample1-x_edge)))*((y_edge-y_sample1)**2+(x_edge-x_sample1)**2)**0.5
-                esf.append((dist1-1,intensity1))
+                esf_x.append(dist1-1)
+                esf_y.append(intensity1)
+                                
             if 0<= y_sample2<= len(array) and 0<= x_sample2<= len(array[0]):
                 dist2 = ((x_sample2-x_edge)/(np.abs(x_sample2-x_edge)))*((y_edge-y_sample2)**2+(x_edge-x_sample2)**2)**0.5
                 intensity2 =  array[floor(y_sample2)][floor(x_sample2)]
-                esf.append((dist2-1,intensity2))
-    return esf
+                esf_x.append(dist2-1)
+                esf_y.append(intensity2)
+    return esf_x,esf_y
 
 
 """
@@ -359,7 +440,8 @@ Variable:
 def esf_bin_smooth(esf_dist,esf_intensity,binsize):
     minimum_dist = min(esf_dist)
     distance_range = max(esf_dist)-min(esf_dist)
-    binned_esf= []
+    binned_esfx= []
+    binned_esfy = []
     number_of_bins = np.abs(int((distance_range)/binsize))
     for i in range(number_of_bins):
         tot_intensity = 0
@@ -368,9 +450,10 @@ def esf_bin_smooth(esf_dist,esf_intensity,binsize):
             if minimum_dist+(i-0.5)*binsize<esf_dist[j]<=minimum_dist+(i+0.5)*binsize:
                 tot_intensity+= esf_intensity[j]
                 k+= 1
-        binned_esf.append((minimum_dist+i*binsize, tot_intensity/k))
+        binned_esfx.append(minimum_dist+i*binsize)
+        binned_esfy.append(tot_intensity/k)
 
-    return binned_esf
+    return binned_esfx,binned_esfy
 
 
 """
@@ -421,7 +504,7 @@ def median_filter(esf, window_size):
 
 """
 Summary:
-    Uses a 2-point kernel to approximate the derivative of a 1-D function via convlution.
+    Uses a 2-point kernel to approximate the derivative of a 1-D function via convolution.
     Kernel is (-1,1)
 """
 def get_derivative(x,y):
@@ -496,7 +579,7 @@ def make_sims():
         #plt.plot(dist,intensity)
         #plt.show()
     return out
-make_sims()
+
 
 def mtf_list(list):
     print(len(list))
@@ -684,7 +767,40 @@ def display_roi(filename , save_or_show):
         plt.colorbar(cmap = cm.gray)
         plt.show()
 def main():
-    #display_roi("image0008_corrected_(100,300)-(50,250).csv", "save")
-    #mtf_figure(lsf_figure(False))
-    mtf_list(make_sims())
+    
+    #filename = input("Enter the filename in the images folder you want to analyze.\n")
+    ROI,rows,cols = open_images('image0008.bmp',roi_select=False,row0 =700,row1 =900,col0 =300,col1 =500)
+    #filename = input("Enter the filename of the light frame.\n")
+    light,x,y = open_images('image0008_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    #filename = input("Enter the filename of the dark frame.\n")
+    dark,x,y = open_images('image0008_dark.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    corrected_ROI = flatfield_correction(light, dark, ROI)
+    plt.imshow(corrected_ROI)
+    plt.colorbar()
+    plt.show()
+    
+    threshold = (rows[1]-rows[0])*0.75
+    edge_points = detect_edge_points(corrected_ROI, 0.2)
+    lines = hough_transform(edge_points,threshold,True)
+    
+    #line_input = input("Enter the correct edge line.E.g.(0.09162978572970237, 34.0)\n")
+    #line_list = line_input.split(',')
+    #r,theta = float(line_list[0]),float(line_list[1])
+    r,theta = lines[0][1],lines[0][0]
+    
+    erf_x,erf_y = get_esf(corrected_ROI, theta, r,1, 15)
+    binned_esfx,binned_esfy = esf_bin_smooth(erf_x,erf_y, .1)
+    
+    
+    plt.scatter(binned_esfx,binned_esfy,marker='.')
+    plt.show()
+    
+    
+    
+    
+    
+    
+    
 main()
+    
+
