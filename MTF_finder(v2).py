@@ -20,7 +20,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 """
-Utilities-----------------------------------------------------------------------------------------
+Utilities----------------------------------------------------------------------
 
 """
 script_dir= os.path.dirname(__file__)
@@ -425,19 +425,29 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
     return esf_x,esf_y
 
 
-"""
-Summary:
-    Bins data points.
-
-Variable:
-    - esf_dist: sorted from min to max
-    - esf_intensity: list of values, identical indexes correspond to single
-                    points, aka esf_0 is (x,y) = (esf_dist[0],esf_intensity[0])
-
-    - binsize: measured as percentage of pixel width, determines the range of
-               distances over which intensity values will be averaged
-"""
 def esf_bin_smooth(esf_dist,esf_intensity,binsize):
+    '''
+    
+
+    Parameters
+    ----------
+    esf_dist : array
+        x-coords of esf
+    esf_intensity : array
+        list of values, identical indexes correspond to single points, aka 
+        esf_0 is (x,y) = (esf_dist[0],esf_intensity[0])
+    binsize : integer
+        measured as percentage of pixel width, determines the range of 
+        distances over which intensity values will be averaged
+
+    Returns
+    -------
+    binned_esfx : array
+        Binned postions
+    binned_esfy : array
+        Binned intensity
+
+    '''
     minimum_dist = min(esf_dist)
     distance_range = max(esf_dist)-min(esf_dist)
     binned_esfx= []
@@ -450,8 +460,9 @@ def esf_bin_smooth(esf_dist,esf_intensity,binsize):
             if minimum_dist+(i-0.5)*binsize<esf_dist[j]<=minimum_dist+(i+0.5)*binsize:
                 tot_intensity+= esf_intensity[j]
                 k+= 1
-        binned_esfx.append(minimum_dist+i*binsize)
-        binned_esfy.append(tot_intensity/k)
+        if k!= 0:
+            binned_esfx.append(minimum_dist+i*binsize)
+            binned_esfy.append(tot_intensity/k)
 
     return binned_esfx,binned_esfy
 
@@ -467,40 +478,75 @@ Variables:
     - window_size: odd integer expected, determines the size of the window over which the data points 
                    are averaged 
 """
-def average_filter(esf,window_size):
-    out_dist= []
-    out_intensity = []
-    out = []
-    for i in esf:
+def average_filter(esfx,esfy,window_size):
+    '''
+    
+
+    Parameters
+    ----------
+    esf : array
+        Esf intensity values
+    window_size : TYPE
+        Size of window in which to calculate the median
+
+    Returns
+    -------
+    med_esfx : Array
+        Median distance values
+    med_esfy : Array
+        Median intensity values
+
+
+    '''
+    med_esfx= []
+    med_esfy = []
+    step= window_size
+    i = 0
+    while i<len(esfy):
+        avg_dist = 0
+        avg_inten = 0
+        if i+step>len(esfy):
+            for l in range(i,len(esfy)):
+               avg_dist+=esfx[l]
+               avg_inten+=esfy[l]
+        else:
+            for k in range(step):
+                avg_dist+=esfx[i+k]
+                avg_inten+=esfy[i+k]
+        med_esfx.append(avg_dist/step)
+        med_esfy.append(avg_inten/step)
+        
+        i+= step
+        
+    '''    
+    for i in range(0,len(esfy), step):
         to_average = []
         avg_dist = 0
         avg_inten = 0
-        for j in esf:
-            if i[0]-window_size/2<j[0]<i[0]+window_size/2:
-                to_average.append(j)
-        for k in to_average:
-            avg_dist+=k[0]
-            avg_inten +=k[1]
-        out_dist.append(avg_dist/len(to_average))
-        out_intensity.append(avg_inten/len(to_average))
+        for j in range(len(esfy)):
+            if esfy[i]-window_size/2<esfy[j]<esfy[i]+window_size/2:
+                avg_dist+=esfx[j]
+                avg_inten +=esfy[j]
+        med_esfx.append(avg_dist/len(to_average))
+        med_esfy.append(avg_inten/len(to_average))
         out.append((avg_dist/len(to_average),avg_inten/len(to_average)))
-    return out_dist,out_intensity, out
+    '''
+    return med_esfx,med_esfy
 
-def median_filter(esf, window_size):
+def median_filter(esfx,esfy, window_size):
     out_dist= []
     out_intensity = []
     out= []
-    for i in range(floor(window_size/2),len(esf)-floor(window_size/2)):
+    for i in range(floor(window_size/2),len(esfy)-floor(window_size/2)):
         temp = []
-        for j in range(-floor(window_size/2), floor(window_size/2)):
-            temp.append(esf[j+i])
-        temp_dist,temp_inten = make_scatter(temp)
+        j = floor(window_size/2)
+        temp_dist,temp_inten = esfx[i-j:i+j], esfy[i-j:i+j]
         median_dist = sorted(temp_dist)[floor(window_size/2)+1]
         median_inten = sorted(temp_inten)[floor(window_size/2)+1]
         out_dist.append(median_dist)
         out_intensity.append(median_inten)
         out.append((median_dist,median_inten))
-    return out_dist,out_intensity,out
+    return out_dist,out_intensity
 
 """
 Summary:
@@ -766,12 +812,12 @@ def display_roi(filename , save_or_show):
         plt.imshow(array,cmap= cm.gray)
         plt.colorbar(cmap = cm.gray)
         plt.show()
-def main():
+def intro():
     
     #filename = input("Enter the filename in the images folder you want to analyze.\n")
-    ROI,rows,cols = open_images('image0008.bmp',roi_select=False,row0 =700,row1 =900,col0 =300,col1 =500)
+    ROI,rows,cols = open_images('image0006.tiff',roi_select=False,row0 =400,row1 =600,col0 =400,col1 =600)
     #filename = input("Enter the filename of the light frame.\n")
-    light,x,y = open_images('image0008_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    light,x,y = open_images('image0006_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
     #filename = input("Enter the filename of the dark frame.\n")
     dark,x,y = open_images('image0008_dark.bmp', False,rows[0],rows[1],cols[0],cols[1])
     corrected_ROI = flatfield_correction(light, dark, ROI)
@@ -779,7 +825,7 @@ def main():
     plt.colorbar()
     plt.show()
     
-    threshold = (rows[1]-rows[0])*0.75
+    threshold = (rows[1]-rows[0])*0.95
     edge_points = detect_edge_points(corrected_ROI, 0.2)
     lines = hough_transform(edge_points,threshold,True)
     
@@ -788,19 +834,44 @@ def main():
     #r,theta = float(line_list[0]),float(line_list[1])
     r,theta = lines[0][1],lines[0][0]
     
-    erf_x,erf_y = get_esf(corrected_ROI, theta, r,1, 15)
-    binned_esfx,binned_esfy = esf_bin_smooth(erf_x,erf_y, .1)
+    erf_x,erf_y = get_esf(corrected_ROI, theta, r,1.1, 20)
     
-    
-    plt.scatter(binned_esfx,binned_esfy,marker='.')
+    plt.scatter(erf_x,erf_y, marker = '.')
     plt.show()
     
     
+    binned_esfx,binned_esfy = esf_bin_smooth(erf_x,erf_y, .1)
+    
+    avg_erfx, avg_erfy = average_filter(binned_esfx,binned_esfy,5)
+    
+    med_erfx, med_erfy = median_filter(avg_erfx,avg_erfy, 5)
+    
+    plt.scatter(med_erfx,med_erfy,marker='.')
+    plt.title('Median applied')
+    plt.show()
+    
+    X_interp = np.linspace(min(med_erfx), max(med_erfx),1000)
+    Y_interp = scipy.interpolate.pchip_interpolate(med_erfx, med_erfy, X_interp)
+    Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
+    
+    plt.plot(X_interp,Yhat)
+    plt.title('Sav-Gol applied')
+    plt.show()
+    
+    lsf_x, lsf_y = get_derivative(X_interp, Yhat)
     
     
+    plt.plot(lsf_x,lsf_y)
+    plt.plot()
+    plt.show()
     
+    mtf_x,mtf_y = FFT(lsf_x, lsf_y)
     
+    plt.scatter(mtf_x,mtf_y, marker = '.')
+    plt.xlim((0,2.5))
     
-main()
+    freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
+    print(freq_res)
+intro()
     
 

@@ -300,6 +300,7 @@ def hough_transform(array, threshold1, plot):
         plt.imshow(array)
         plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
         plt.show()
+    print("Lines:")
     print(lines)
     return lines
 
@@ -307,7 +308,7 @@ def hough_transform(array, threshold1, plot):
 
 """
 Summary:
-        Consider the array in R2, create a number lines perpendicular to the 
+        Consider the array in R2, create a number of lines perpendicular to the 
         edge and a number(sampling_number) of vertical lines whose spacing is 
         determined by the sampling_frequency. For each intersection of the 
         vertical and perpendicular lines record the distance from the edge and
