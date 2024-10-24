@@ -815,9 +815,9 @@ def display_roi(filename , save_or_show):
 def intro():
     
     #filename = input("Enter the filename in the images folder you want to analyze.\n")
-    ROI,rows,cols = open_images('image0006.tiff',roi_select=False,row0 =400,row1 =600,col0 =400,col1 =600)
+    ROI,rows,cols = open_images('image0008.bmp',roi_select=True,row0 =400,row1 =600,col0 =400,col1 =600)
     #filename = input("Enter the filename of the light frame.\n")
-    light,x,y = open_images('image0006_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    light,x,y = open_images('image0008_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
     #filename = input("Enter the filename of the dark frame.\n")
     dark,x,y = open_images('image0008_dark.bmp', False,rows[0],rows[1],cols[0],cols[1])
     corrected_ROI = flatfield_correction(light, dark, ROI)
@@ -825,7 +825,7 @@ def intro():
     plt.colorbar()
     plt.show()
     
-    threshold = (rows[1]-rows[0])*0.95
+    threshold = (rows[1]-rows[0])*0.85
     edge_points = detect_edge_points(corrected_ROI, 0.2)
     lines = hough_transform(edge_points,threshold,True)
     
@@ -834,7 +834,7 @@ def intro():
     #r,theta = float(line_list[0]),float(line_list[1])
     r,theta = lines[0][1],lines[0][0]
     
-    erf_x,erf_y = get_esf(corrected_ROI, theta, r,1.1, 20)
+    erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 20)
     
     plt.scatter(erf_x,erf_y, marker = '.')
     plt.show()
@@ -868,10 +868,68 @@ def intro():
     mtf_x,mtf_y = FFT(lsf_x, lsf_y)
     
     plt.scatter(mtf_x,mtf_y, marker = '.')
-    plt.xlim((0,2.5))
+    plt.xlim((0,1))
     
     freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
     print(freq_res)
-intro()
+#intro()
     
 
+def reorder():
+    
+    #filename = input("Enter the filename in the images folder you want to analyze.\n")
+    ROI,rows,cols = open_images('image0008.bmp',roi_select=True,row0 =400,row1 =600,col0 =400,col1 =600)
+    #filename = input("Enter the filename of the light frame.\n")
+    light,x,y = open_images('image0008_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    #filename = input("Enter the filename of the dark frame.\n")
+    dark,x,y = open_images('image0008_dark.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    corrected_ROI = flatfield_correction(light, dark, ROI)
+    plt.imshow(corrected_ROI)
+    plt.colorbar()
+    plt.show()
+    
+    threshold = (rows[1]-rows[0])*0.85
+    edge_points = detect_edge_points(corrected_ROI, 0.2)
+    lines = hough_transform(edge_points,threshold,True)
+    
+    #line_input = input("Enter the correct edge line.E.g.(0.09162978572970237, 34.0)\n")
+    #line_list = line_input.split(',')
+    #r,theta = float(line_list[0]),float(line_list[1])
+    r,theta = lines[0][1],lines[0][0]
+    
+    erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 20)
+    binx,biny = esf_bin_smooth(erf_x,erf_y, .1)
+    plt.scatter(binx,biny, marker = '.')
+    plt.show()
+    
+    Yhat = scipy.signal.savgol_filter(biny,51,2,0)
+    
+    plt.scatter(binx,Yhat,marker='.')
+    plt.show()
+    
+    lsf_x,lsf_y = get_derivative(binx, Yhat)
+    
+    plt.scatter(lsf_x,lsf_y,marker='.')
+    plt.show()
+    
+    binned_esfx,binned_esfy = esf_bin_smooth(lsf_x,lsf_y, .1)
+    
+    avg_erfx, avg_erfy = average_filter(binned_esfx,binned_esfy,5)
+    
+    med_erfx, med_erfy = median_filter(avg_erfx,avg_erfy, 5)
+    
+    plt.scatter(med_erfx,med_erfy,marker='.')
+    plt.title('Median applied')
+    plt.show()
+    
+    
+
+    
+    mtf_x,mtf_y = FFT(med_erfx, med_erfy)
+    
+    plt.scatter(mtf_x,mtf_y, marker = '.')
+    plt.xlim((0,1))
+    
+    freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
+    print(freq_res)
+reorder()
