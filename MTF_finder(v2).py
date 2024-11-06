@@ -315,15 +315,18 @@ def detect_edge_points(array, threshold):
     Returns
     -------
     edge_points : numpy array
-        Array of zeros with edgepoints set to a value of 1.
+        Binary array with edgepoints set to a value of 1.
 
     '''
     light_value = np.array(array).max()
     edge_points = np.zeros((len(array),len(array[0])))
     for j in range(len(array)):
         for i in range(len(array)-1,0,-1):
-            if (0.5-threshold)*light_value <=  array[j][i]<= (0.5+threshold)*light_value:
-                edge_points[j][i] =1
+            if np.sum(edge_points[j])<5: #added to incase bright points after 
+                                         #edge are present  
+                if (0.5-threshold)*light_value <=  array[j][i]<= (0.5+threshold)*light_value:
+                    edge_points[j][i] =1
+                
 
     return edge_points
 
@@ -358,13 +361,14 @@ def hough_transform(array, threshold1, plot):
     for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = threshold1)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ##plt.plot((x0, y0), slope=np.tan(angle + np.pi/2))
-        lines.append((angle,dist))
+        lines.append((angle,dist,dist/np.cos(angle)))
     if plot==True:
         plt.imshow(array)
         plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
         plt.show()
     print("Lines:\n")
-    print(lines)
+    for i in range(len(lines)):
+        print(lines[i])
     return lines
 
 
@@ -599,219 +603,6 @@ def FFT(lsf_dist,lsf_inten):
 
     return freq ,X
 
-
-
-
-
-
-
-
-def make_sims():
-    a=0.1
-    b=0.1
-    theta = 5
-    object = make_object_plane(theta, 1000,1000, 0,1)
-    averaged = make_image_plane(object, 200)
-    out=[]
-    for i in range(0,4):
-        a+=i*0.15
-        b+=i*0.15
-        kernel = make_kernal(a,b,9)
-        image = convolve(kernel,averaged)
-        dist, intensity = make_lsf(a,b, 5)
-        freq,mtf= FFT(dist, intensity)
-        out.append((image, freq,mtf, "a = " +str(a)))
-        #plt.plot(freq,mtf)
-        #plt.plot(dist,intensity)
-        #plt.show()
-    return out
-
-
-def mtf_list(list):
-    print(len(list))
-    out = []
-    for i in list:
-        line = [(-0.09599310885968815, 100.0)]
-        erf = get_esf(i[0], line[0][0], line[0][1], 0.95,3)
-        X2,Y2 =  make_scatter(sorted(erf))
-        binned_esf = esf_bin_smooth(X2,Y2, .1)
-        X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
-        X_median, Y_median, median = median_filter(average,13)
-        X_interp = np.linspace(min(X_median), max(X_median),1000)
-        Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-        Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
-        dx,dy = get_derivative(X_interp, Yhat)
-        fx,fy = FFT(dx,dy)
-        out.append((i[1],i[2], "Analytical ("+i[3] + ")", fx,fy, "Sampled (" +i[3] + ")"))
-    
-
-    fig = plt.figure(figsize = (12,9))
-    #rcParams['figure.figsize'] = 9,9
-    #rcParams['figure.dpi'] = 600
-    colors = ["slategrey", "midnightblue","forestgreen","lightseagreen","black"]
-    n = 0
-    for i in out:
-        plt.plot(i[0],i[1],"s--",label = i[2], color = colors[n]) #, color ="slategrey")
-        plt.plot(i[3],i[4],"s-",label = i[5],color = colors[n]) #, color ="lightseagreen")
-        n+=1
-    diff= []
-    tot = 0
-    for i in range(0,20):
-        diff.append(np.abs( out[0][1][i] - out[0][4][i]))
-        tot += np.abs( out[0][1][i] - out[0][4][i])
-    print(max(diff))
-    av = tot/len(diff)
-    sum = 0
-    for i in diff:
-        sum += (i - av)**2
-    print((sum/len(diff))**0.5)
-
-    real_lsf= lsf_figure(x =False)
-    fx, fy = FFT(real_lsf[4][0],real_lsf[4][1])
-    font = 36
-    #plt.plot(fx,fy,"s-", label = "Real Image", color = "black")
-    plt.legend(fontsize =.5*font)
-    plt.xlim(0,1)
-    plt.title("MTFs from Simulations", fontsize = font)
-    plt.xlabel('Spatial Frequency [cycles/pixel]',fontsize = font)
-    plt.ylabel("Contrast [%]",fontsize = font)
-    #plt.show()
-    plt.savefig("MTF11.png", dpi = 600, bbox_inches = "tight")
-
-
-
-def esf_figure():
-    array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
-    #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, 0.10035643198967392, 119.0,0.95,3)
-    X2,Y2 =  make_scatter(sorted(esf))
-    binned_esf = esf_bin_smooth(X2,Y2, .1)
-
-    X_binned , Y_binned = make_scatter(binned_esf)
-    
-    X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
-
-    X_median, Y_median, median = median_filter(average,13)
-    smoothing = [("binned",X_binned,Y_binned), ("averaaged",X_avgfilter,Y_avgfilter), ("median",X_median,Y_median)]
-    X_interp = np.linspace(min(X_median), max(X_median),1000)
-    Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
-
-    fig, ax = plt.subplots(figsize = (10,10))
-
-    ax.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey")
-    ax.plot(X_binned , Y_binned,".",label = "Binned ERF", color="midnightblue")
-    ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 10)
-    ax.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms = 10)    
-    ax.plot(X_interp,Yhat,label = "Sav.-Gol. Filter", color="black",lw = 2.5)
-
-    font= 36
-    plt.title("Oversampled and Smoothed ERF", fontsize = font)
-    plt.xlabel("Distance from Edge [pixels]", fontsize = font)
-    plt.ylabel("Normalized Intensity", fontsize = font)
-    plt.legend(fontsize = 0.7*font, loc = "upper left")
-
-    axins = inset_axes(ax,  loc = "lower right", height = 3.5, width = 3.5) # zoom = 6
-    axins.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey",ms = 20)
-    axins.plot(X_binned , Y_binned,".",label = "Binned ERF", color="midnightblue",ms = 20)
-    axins.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 20)
-    axins.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms =20)    
-    axins.plot(X_interp,Yhat,label = "Sav.-Gol. Filter", color="black",lw =5.5)
-    x1, x2, y1, y2 = 2.6,3.6,0.875,0.98
-    axins.set_xlim(x1, x2)
-    axins.set_ylim(y1, y2)
-    
-    plt.xticks(visible=False)
-    plt.yticks(visible=False)
-    mark_inset(ax, axins, loc1=1, loc2=2, fc="none", ec="0.5")
-    #plt.draw()
-    #plt.show()
-    plt.savefig("ERF.png", dpi = 600)
-
-
-def lsf_figure(x):
-    array = get_array("image0008_corrected_(100,300)-(50,250).csv", 200)
-    #sampling_frequency in samples per pixel pitch
-    esf = get_esf(array, 0.10035643198967392, 119.0,0.95,3)
-    X2,Y2 =  make_scatter(sorted(esf))
-    
-    binned_esf = esf_bin_smooth(X2,Y2, .1)
-
-    X_binned , Y_binned = make_scatter(binned_esf)
-    
-
-    X_avgfilter,Y_avgfilter, average= average_filter(binned_esf, 0.75)
-    
-
-    X_median, Y_median, median = median_filter(average,13)
-    
-
-    smoothing = [("binned",X_binned,Y_binned), ("averaaged",X_avgfilter,Y_avgfilter), ("median",X_median,Y_median)]
-    X_interp = np.linspace(min(X_median), max(X_median),1000)
-    Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
-
-    X2,Y2 = get_derivative(X2,Y2)
-    X_binned , Y_binned = get_derivative(X_binned , Y_binned)
-    X_avgfilter,Y_avgfilter=  get_derivative(X_avgfilter,Y_avgfilter)
-    X_median, Y_median = get_derivative(X_median, Y_median,)
-    X_interp,Yhat = get_derivative(X_interp,Yhat)
-    if x== True:
-        fig, ax = plt.subplots(1,1,figsize = (10,10))
-
-        ax.plot(X2,Y2,".", label = "Sampled", color="slategrey")
-        ax.plot(X_binned , Y_binned,".",label = "Binned", color="midnightblue")
-        ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged", color="forestgreen",ms = 10)
-        ax.plot(X_median, Y_median,"*-",label = "Median", color="lightseagreen", ms = 10)    
-        ax.plot(X_interp,Yhat,label = "Sav.-Gol.", color="black",lw = 2.5)
-
-        font = 36
-        plt.title("LSFs with and without Smoothing", fontsize = font)
-        plt.xlabel("Distance from Edge [pixels]", fontsize = font)
-        plt.ylabel("Normalized Intensity per Pixel", fontsize = font)
-        plt.legend(fontsize = 0.75*font, loc = "lower left")
-        plt.show
-        #plt.savefig("LSF.png", dpi = 600)
-
-    return [(X2,Y2,"Sampled" ),(X_binned , Y_binned, "Binned"),(X_avgfilter,Y_avgfilter, "Average filter"),
-            (X_median, Y_median, "Median Filter"),(X_interp,Yhat, "Savistky-Golay Filter")]
-
-
-def mtf_figure(lsf_list):
-    fig, ax = plt.subplots(1,1, figsize = (10,10))
-    mtf_list = []
-    for i in lsf_list:
-        (xf,yf) = FFT(i[0],i[1])
-        mtf_list.append((xf,yf, i[2]))
-    colors = ["slategrey", "midnightblue","forestgreen","lightseagreen","black"] 
-    n=0
-    font = 24
-    for i in mtf_list:
-        if i[2]==  "Savistky-Golay Filter":
-            ax.plot(i[0],i[1], ".-" , label = i[2], color = colors[n], lw = 3)
-        else:
-            ax.plot(i[0],i[1], ".-" , label = i[2], color = colors[n])
-        n+=1
-    plt.legend(fontsize = 0.75*font)
-    plt.title("MTF", fontsize = font)
-    plt.xlabel("Spatial Frequency [cycles per pixel]",fontsize = font)
-    plt.ylabel("Contrast [%]", fontsize = font)
-    plt.xlim(0,2)
-    plt.ylim(0,1)
-    plt.savefig("MTF.png", dpi = 600, bbox_inches='tight' )
-#mtf_figure(lsf_figure(False))
-def display_roi(filename , save_or_show):
-    array = get_array(filename, 200)
-    fig = plt.subplots(figsize = (10,10))
-    if save_or_show == "save":
-        plt.imshow(array, cmap= cm.gray)
-        plt.colorbar(cmap = cm.gray)
-        plt.title("ROI", fontsize = 24)
-        plt.savefig("ROI.png", dpi = 600,bbox_inches='tight' )
-    if save_or_show == "show":
-        plt.imshow(array,cmap= cm.gray)
-        plt.colorbar(cmap = cm.gray)
-        plt.show()
 def intro():
     
     #filename = input("Enter the filename in the images folder you want to analyze.\n")
@@ -829,10 +620,10 @@ def intro():
     edge_points = detect_edge_points(corrected_ROI, 0.2)
     lines = hough_transform(edge_points,threshold,True)
     
-    #line_input = input("Enter the correct edge line.E.g.(0.09162978572970237, 34.0)\n")
+    #line_input = input("Enter the correct edge line.E.g.  0.09162978572970237,34.0\n")
     #line_list = line_input.split(',')
     #r,theta = float(line_list[0]),float(line_list[1])
-    r,theta = lines[0][1],lines[0][0]
+    r,theta = lines[1][1],lines[1][0]
     
     erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 20)
     
@@ -852,7 +643,7 @@ def intro():
     
     X_interp = np.linspace(min(med_erfx), max(med_erfx),1000)
     Y_interp = scipy.interpolate.pchip_interpolate(med_erfx, med_erfy, X_interp)
-    Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
+    Yhat = scipy.signal.savgol_filter(Y_interp,51,2,0)
     
     plt.plot(X_interp,Yhat)
     plt.title('Sav-Gol applied')

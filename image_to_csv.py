@@ -7,7 +7,24 @@ import shutil
 import cv2
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import TransformedBbox, BboxPatch, BboxConnector 
+import numpy as np
+def mark_inset(parent_axes, inset_axes, loc1a=1, loc1b=1, loc2a=2, loc2b=2, **kwargs):
+    rect = TransformedBbox(inset_axes.viewLim, parent_axes.transData)
+
+    pp = BboxPatch(rect, fill=False, **kwargs)
+    parent_axes.add_patch(pp)
+
+    p1 = BboxConnector(inset_axes.bbox, rect, loc1=loc1a, loc2=loc1b, **kwargs)
+    inset_axes.add_patch(p1)
+    p1.set_clip_on(False)
+    p2 = BboxConnector(inset_axes.bbox, rect, loc1=loc2a, loc2=loc2b, **kwargs)
+    inset_axes.add_patch(p2)
+    p2.set_clip_on(False)
+
+    return pp, p1, p2
+
 script_dir= os.path.dirname(__file__)
 
 def open_images(*filename,full):
@@ -63,24 +80,28 @@ def main():
     fig, ax = plt.subplots(figsize = (9,9))
     plt.imshow(corrected_roi,interpolation='nearest', cmap = "gist_grey")
 
+    roi1 = corrected_roi
     
-    x1, x2, y1, y2 = 800,1000,900,1100
-    axins = inset_axes(ax, height = 4, width = 4, loc=1) # zoom = 6
-    axins.imshow(corrected_roi, cmap = "gist_grey", interpolation='nearest')
+
+    x1, x2, y1, y2 = 800, 1000, 1100, 950#300,500,350,550
+    
+    axins = inset_axes(ax, height = 3.5, width = 4, loc=1,bbox_to_anchor=(4300,4450)) 
+    axins.imshow(roi1, cmap = "gist_grey", interpolation='nearest')
     axins.set_xlim(x1, x2)
     axins.set_ylim(y1, y2)
-    mark_inset(ax, axins, loc1=3, loc2=4, fc="none", ec="0.5")
+    ax.text(540,150,"Region of Interest", fontsize = 24)
+    mark_inset(ax, axins,loc1a=3,loc1b=2,loc2a=4,loc2b = 1, fc="none", ec="0.5")
     plt.xticks(visible=False)
     plt.yticks(visible=False)
 
     #plt.colorbar()
-    plt.title("Image")
+    ax.set_title("Image", fontsize = 36)
     #x = np.linspace(0,200, 250)
     #y= ((105.0)-x*np.cos(1.5271630954950384)) / np.sin(1.5271630954950384)
     #plt.plot(x,y, color = "r", lw= 2)
     #plt.xlim(0,200)
     plt.draw()
-    plt.show()
+    plt.savefig("Image.png", dpi =600, bbox_inches = "tight")
     #save_as_csv(corrected_roi, "razor.csv")
 main()
 

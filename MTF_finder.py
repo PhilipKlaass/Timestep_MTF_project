@@ -405,6 +405,10 @@ def average_filter(esf,window_size):
     return out_dist,out_intensity, out
 
 def median_filter(esf, window_size):
+    """
+    Summary: takes the median of a subset of the datapoints and replaces
+    
+    """
     out_dist= []
     out_intensity = []
     out= []
@@ -517,7 +521,7 @@ def mtf_list(list):
         out.append((i[1],i[2], "Analytical ("+i[3] + ")", fx,fy, "Sampled (" +i[3] + ")"))
     
 
-    fig = plt.figure(figsize = (12,9))
+    fig = plt.figure(figsize = (10,9), dpi = 600)
     #rcParams['figure.figsize'] = 9,9
     #rcParams['figure.dpi'] = 600
     colors = ["slategrey", "midnightblue","forestgreen","lightseagreen","black"]
@@ -544,7 +548,7 @@ def mtf_list(list):
     #plt.plot(fx,fy,"s-", label = "Real Image", color = "black")
     plt.legend(fontsize =.5*font)
     plt.xlim(0,1)
-    plt.title("MTFs from Simulations", fontsize = font)
+    plt.title("Simulated and Real MTFs", fontsize = font)
     plt.xlabel('Spatial Frequency [cycles/pixel]',fontsize = font)
     plt.ylabel("Contrast [%]",fontsize = font)
     #plt.show()
@@ -569,13 +573,13 @@ def esf_figure():
     Y_interp = scipy.interpolate.pchip_interpolate(X_median, Y_median, X_interp)
     Yhat = scipy.signal.savgol_filter(Y_interp,77,2,0)
 
-    fig, ax = plt.subplots(figsize = (10,10))
+    fig, ax = plt.subplots(figsize = (9,10))
 
-    ax.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey")
-    ax.plot(X_binned , Y_binned,".",label = "Binned ERF", color="midnightblue")
-    ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 10)
-    ax.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms = 10)    
-    ax.plot(X_interp,Yhat,label = "Sav.-Gol. Filter", color="black",lw = 2.5)
+    ax.plot(X2,Y2,".-", label = "Sampled ERF", color="lightseagreen", alpha = 0.5,ms = 4)
+    ax.plot(X_binned , Y_binned,".-",label = "Binned ERF", color="forestgreen", ms = 8)
+    #ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="slategrey",ms = 10)
+    #ax.plot(X_median, Y_median,"*-",label = "Median Filter", color="midnightblue", ms = 10)    
+    ax.plot(X_interp,Yhat,label = "Added Filters", color="black",lw = 2.5)
 
     font= 36
     plt.title("Oversampled and Smoothed ERF", fontsize = font)
@@ -583,12 +587,12 @@ def esf_figure():
     plt.ylabel("Normalized Intensity", fontsize = font)
     plt.legend(fontsize = 0.7*font, loc = "upper left")
 
-    axins = inset_axes(ax,  loc = "lower right", height = 3.5, width = 3.5) # zoom = 6
-    axins.plot(X2,Y2,".", label = "Sampled ERF", color="slategrey",ms = 20)
-    axins.plot(X_binned , Y_binned,".",label = "Binned ERF", color="midnightblue",ms = 20)
-    axins.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 20)
-    axins.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms =20)    
-    axins.plot(X_interp,Yhat,label = "Sav.-Gol. Filter", color="black",lw =5.5)
+    axins = inset_axes(ax,  loc = "lower right", height = 3.5, width = 3) # zoom = 6
+    axins.plot(X2,Y2,".", label = "Sampled ERF", color="lightseagreen", alpha = 0.5, ms = 20)
+    axins.plot(X_binned , Y_binned,".",label = "Binned ERF", color="forestgreen",ms = 40)
+    #axins.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged filter", color="forestgreen",ms = 20)
+    #axins.plot(X_median, Y_median,"*-",label = "Median Filter", color="lightseagreen", ms =20)    
+    axins.plot(X_interp,Yhat,label = "Further Filters", color="black",lw =5.5)
     x1, x2, y1, y2 = 2.6,3.6,0.875,0.98
     axins.set_xlim(x1, x2)
     axins.set_ylim(y1, y2)
@@ -596,9 +600,9 @@ def esf_figure():
     plt.xticks(visible=False)
     plt.yticks(visible=False)
     mark_inset(ax, axins, loc1=1, loc2=2, fc="none", ec="0.5")
-    #plt.draw()
+    plt.draw()
     #plt.show()
-    plt.savefig("ERF.png", dpi = 600)
+    plt.savefig("ERF2.png", dpi = 600 , bbox_inches = "tight")
 
 
 def lsf_figure(x):
@@ -629,21 +633,20 @@ def lsf_figure(x):
     X_median, Y_median = get_derivative(X_median, Y_median,)
     X_interp,Yhat = get_derivative(X_interp,Yhat)
     if x== True:
-        fig, ax = plt.subplots(1,1,figsize = (10,10))
+        fig, ax = plt.subplots(1,1,figsize = (9,10))
 
-        ax.plot(X2,Y2,".", label = "Sampled", color="slategrey")
-        ax.plot(X_binned , Y_binned,".",label = "Binned", color="midnightblue")
-        ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged", color="forestgreen",ms = 10)
-        ax.plot(X_median, Y_median,"*-",label = "Median", color="lightseagreen", ms = 10)    
-        ax.plot(X_interp,Yhat,label = "Sav.-Gol.", color="black",lw = 2.5)
+        ax.plot(X2,Y2,".", label = "Sampled", color="lightseagreen", alpha = 0.5, ms = 4)
+        ax.plot(X_binned , Y_binned,".",label = "Binned", color="forestgreen", ms = 8)
+        #ax.plot(X_avgfilter,Y_avgfilter,".-",label = "Averaged", color="forestgreen" "midnightblue",ms = 10)
+        #ax.plot(X_median, Y_median,"*-",label = "Median", color="slategrey", ms = 10)    
+        ax.plot(X_interp,Yhat,label = "Added Filters", color="black",lw = 2.5)
 
         font = 36
-        plt.title("LSFs with and without Smoothing", fontsize = font)
+        plt.title("LSFs with & without Smoothing", fontsize = font)
         plt.xlabel("Distance from Edge [pixels]", fontsize = font)
-        plt.ylabel("Normalized Intensity per Pixel", fontsize = font)
+        plt.ylabel("Normalized Intensity [per Pixel]", fontsize = font)
         plt.legend(fontsize = 0.75*font, loc = "lower left")
-        plt.show
-        #plt.savefig("LSF.png", dpi = 600)
+        plt.savefig("LSF.png", dpi = 600)
 
     return [(X2,Y2,"Sampled" ),(X_binned , Y_binned, "Binned"),(X_avgfilter,Y_avgfilter, "Average filter"),
             (X_median, Y_median, "Median Filter"),(X_interp,Yhat, "Savistky-Golay Filter")]
@@ -685,7 +688,5 @@ def display_roi(filename , save_or_show):
         plt.colorbar(cmap = cm.gray)
         plt.show()
 def main():
-    #display_roi("image0008_corrected_(100,300)-(50,250).csv", "save")
-    #mtf_figure(lsf_figure(False))
-    mtf_list(make_sims())
+    lsf_figure(True)
 main()
