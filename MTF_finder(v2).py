@@ -11,12 +11,7 @@ from skimage import data
 import skimage
 from scipy.integrate import dblquad
 from scipy.integrate import quad
-from matplotlib import cm
 import cv2 as cv
-from pylab import rcParams
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
-from mpl_toolkits.axes_grid1.inset_locator import mark_inset
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 """
@@ -506,6 +501,13 @@ def average_filter(esfx,esfy,window_size):
     med_esfy = []
     step= window_size
     i = 0
+    y = np.array(esfy)
+    
+    print(np.ceil(window_size/2))
+    for i in range(int(np.ceil(window_size/2)),len(y)-int(np.ceil(window_size/2))):
+        if i<len(esfy)*0.35 or i >0.65*len(esfy):
+            y[i] = np.sum(y[i-int(np.ceil(window_size/2)):i+int(np.ceil(window_size/2))])/window_size
+        
     while i<len(esfy):
         avg_dist = 0
         avg_inten = 0
@@ -535,7 +537,7 @@ def average_filter(esfx,esfy,window_size):
         med_esfy.append(avg_inten/len(to_average))
         out.append((avg_dist/len(to_average),avg_inten/len(to_average)))
     '''
-    return med_esfx,med_esfy
+    return esfx,y
 
 def median_filter(esfx,esfy, window_size):
     out_dist= []
@@ -592,13 +594,13 @@ def FFT(lsf_dist,lsf_inten):
     X1 = scipy.fft.fft(lsf_inten)
     X =np.abs(X1) #modulus of the FFT
 
-    m = X[0]
+    m = max(X)
     for i in range(len(X)):
         X[i]= X[i]/m
 
     R = (max(lsf_dist)-min(lsf_dist))#range in units of pixels
     sr = N/(R) #sampling rate
-    freq = n*sr/N #spatial frequency in cycles/mm
+    freq = n*sr/N #spatial frequency in cycles/pixel
 
 
     return freq ,X
@@ -680,7 +682,6 @@ def reorder():
     plt.show()
     
     threshold = len(ROI[0])*0.75
-    print(threshold)
     edge_points = detect_edge_points(corrected_ROI, 0.2)
     lines = hough_transform(edge_points,threshold,True)
     
@@ -695,22 +696,33 @@ def reorder():
     plt.title("binned")
     plt.show()
     
-    Yhat = scipy.signal.savgol_filter(biny,51,2,0)
+    Yhat = scipy.signal.savgol_filter(biny,window_length=9,polyorder = 2,
+                                      deriv = 1, delta = 0.1, mode = "nearest")
+    
+    m = max(Yhat)
+    for i in range(len(Yhat)):
+        Yhat[i] = Yhat[i]/m
+    print(len(Yhat))
+    print(len(binx))
     
     plt.scatter(binx,Yhat,marker='.')
     plt.title("savgol")
     plt.show()
     
-    lsf_x,lsf_y = get_derivative(binx, Yhat)
+    lsf_x,lsf_y = average_filter(binx, Yhat, 20)
+    
+    print(len(lsf_x))
+    print(len(lsf_y))
     
     plt.scatter(lsf_x,lsf_y,marker='.')
-    plt.title('derivative')
+    plt.title('average')
     plt.show()
     
     mtf_x,mtf_y = FFT(lsf_x,lsf_y)#avg_erfx, avg_erfy)
     
     plt.scatter(mtf_x,mtf_y, marker = '.')
     plt.xlim((0,1))
+    plt.title(str(rows[0])+":"+str(rows[1])+","+str(cols[0])+':'+str(cols[1]))
     plt.show()
     freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
     print(freq_res)
