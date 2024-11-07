@@ -8,7 +8,7 @@ from skimage.transform import hough_line, hough_line_peaks
 from skimage.feature import canny
 from skimage.draw import line as draw_line
 from skimage import data
-import skimage as ski
+import skimage
 from scipy.integrate import dblquad
 from scipy.integrate import quad
 from matplotlib import cm
@@ -679,7 +679,8 @@ def reorder():
     plt.colorbar()
     plt.show()
     
-    threshold = (rows[1]-rows[0])*0.85
+    threshold = len(ROI[0])*0.75
+    print(threshold)
     edge_points = detect_edge_points(corrected_ROI, 0.2)
     lines = hough_transform(edge_points,threshold,True)
     
@@ -691,36 +692,26 @@ def reorder():
     erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 20)
     binx,biny = esf_bin_smooth(erf_x,erf_y, .1)
     plt.scatter(binx,biny, marker = '.')
+    plt.title("binned")
     plt.show()
     
     Yhat = scipy.signal.savgol_filter(biny,51,2,0)
     
     plt.scatter(binx,Yhat,marker='.')
+    plt.title("savgol")
     plt.show()
     
     lsf_x,lsf_y = get_derivative(binx, Yhat)
     
     plt.scatter(lsf_x,lsf_y,marker='.')
+    plt.title('derivative')
     plt.show()
     
-    binned_esfx,binned_esfy = esf_bin_smooth(lsf_x,lsf_y, .1)
-    
-    avg_erfx, avg_erfy = average_filter(binned_esfx,binned_esfy,5)
-    
-    med_erfx, med_erfy = median_filter(avg_erfx,avg_erfy, 5)
-    
-    plt.scatter(med_erfx,med_erfy,marker='.')
-    plt.title('Median applied')
-    plt.show()
-    
-    
-
-    
-    mtf_x,mtf_y = FFT(med_erfx, med_erfy)
+    mtf_x,mtf_y = FFT(lsf_x,lsf_y)#avg_erfx, avg_erfy)
     
     plt.scatter(mtf_x,mtf_y, marker = '.')
     plt.xlim((0,1))
-    
+    plt.show()
     freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
     print(freq_res)
 reorder()
