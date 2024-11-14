@@ -357,10 +357,10 @@ def hough_transform(array, threshold1, plot):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
         ##plt.plot((x0, y0), slope=np.tan(angle + np.pi/2))
         lines.append((angle,dist,dist/np.cos(angle)))
-    if plot==True:
-        plt.imshow(array)
-        plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
-        plt.show()
+        if plot==True:
+            plt.imshow(array)
+            plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
+            plt.show()
     print("Lines:\n")
     for i in range(len(lines)):
         print(lines[i])
@@ -497,8 +497,6 @@ def average_filter(esfx,esfy,window_size):
 
 
     '''
-    med_esfx= []
-    med_esfy = []
     step= window_size
     i = 0
     y = np.array(esfy)
@@ -507,22 +505,12 @@ def average_filter(esfx,esfy,window_size):
     for i in range(int(np.ceil(window_size/2)),len(y)-int(np.ceil(window_size/2))):
         if i<len(esfy)*0.35 or i >0.65*len(esfy):
             y[i] = np.sum(y[i-int(np.ceil(window_size/2)):i+int(np.ceil(window_size/2))])/window_size
-        
-    while i<len(esfy):
-        avg_dist = 0
-        avg_inten = 0
-        if i+step>len(esfy):
-            for l in range(i,len(esfy)):
-               avg_dist+=esfx[l]
-               avg_inten+=esfy[l]
-        else:
-            for k in range(step):
-                avg_dist+=esfx[i+k]
-                avg_inten+=esfy[i+k]
-        med_esfx.append(avg_dist/step)
-        med_esfy.append(avg_inten/step)
-        
-        i+= step
+            
+    val = y[int(np.ceil(step/2))]
+    y[:int(np.ceil(step/2))] = [val for i in range(int(np.ceil(step/2)))]
+    
+    val = y[-step]
+    y[len(y) -int(np.ceil(step/2)):] = [val for i in range(int(np.ceil(step/2)))]
         
     '''    
     for i in range(0,len(esfy), step):
@@ -540,19 +528,20 @@ def average_filter(esfx,esfy,window_size):
     return esfx,y
 
 def median_filter(esfx,esfy, window_size):
-    out_dist= []
-    out_intensity = []
-    out= []
-    for i in range(floor(window_size/2),len(esfy)-floor(window_size/2)):
-        temp = []
-        j = floor(window_size/2)
-        temp_dist,temp_inten = esfx[i-j:i+j], esfy[i-j:i+j]
-        median_dist = sorted(temp_dist)[floor(window_size/2)+1]
-        median_inten = sorted(temp_inten)[floor(window_size/2)+1]
-        out_dist.append(median_dist)
-        out_intensity.append(median_inten)
-        out.append((median_dist,median_inten))
-    return out_dist,out_intensity
+    out_intensity = np.array(esfy)
+    for i in range(int(np.ceil(window_size/2)),len(esfy)-int(np.ceil(window_size/2))):
+        if i<len(esfy)*0.35 or i >0.65*len(esfy):
+            
+            j = floor(window_size/2)
+            temp_inten = esfy[i-j:i+j]
+            median_inten = sorted(temp_inten)[floor(window_size/2)+1]
+            out_intensity[i] = median_inten
+    val = out_intensity[int(np.ceil(window_size/2))]
+    out_intensity[:int(np.ceil(window_size/2))] = [val for i in range(int(np.ceil(window_size/2)))]
+    
+    val = out_intensity[-window_size]
+    out_intensity[len(out_intensity) -int(np.ceil(window_size/2)):] = [val for i in range(int(np.ceil(window_size/2)))]        
+    return esfx,out_intensity
 
 """
 Summary:
@@ -671,9 +660,9 @@ def intro():
 def reorder():
     
     #filename = input("Enter the filename in the images folder you want to analyze.\n")
-    ROI,rows,cols = open_images('image0008.bmp',roi_select=True,row0 =400,row1 =600,col0 =400,col1 =600)
+    ROI,rows,cols = open_images('image0009.bmp',roi_select=False,row0 =1200,row1 =1500,col0 =250,col1 =550)
     #filename = input("Enter the filename of the light frame.\n")
-    light,x,y = open_images('image0008_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    light,x,y = open_images('image0009_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
     #filename = input("Enter the filename of the dark frame.\n")
     dark,x,y = open_images('image0008_dark.bmp', False,rows[0],rows[1],cols[0],cols[1])
     corrected_ROI = flatfield_correction(light, dark, ROI)
@@ -690,18 +679,30 @@ def reorder():
     #r,theta = float(line_list[0]),float(line_list[1])
     r,theta = lines[0][1],lines[0][0]
     
-    erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 20)
+    erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 15)
     binx,biny = esf_bin_smooth(erf_x,erf_y, .1)
     plt.scatter(binx,biny, marker = '.')
     plt.title("binned")
     plt.show()
+    '''
+    binx,biny = average_filter(binx, biny, 10)
+    plt.scatter(binx,biny, marker = '.')
+    plt.title("binned")
+    plt.show()
     
-    Yhat = scipy.signal.savgol_filter(biny,window_length=9,polyorder = 2,
-                                      deriv = 1, delta = 0.1, mode = "nearest")
+    binx,biny = median_filter(binx, biny, 10)
+    print(len(biny))
+    print(len(binx))
+    plt.scatter(binx,biny, marker = '.')
+    plt.title("binned")
+    plt.show()
+    '''
+    Yhat = scipy.signal.savgol_filter(biny,window_length=51,polyorder = 2)
     
     m = max(Yhat)
     for i in range(len(Yhat)):
         Yhat[i] = Yhat[i]/m
+    print(len(biny))
     print(len(Yhat))
     print(len(binx))
     
@@ -709,7 +710,12 @@ def reorder():
     plt.title("savgol")
     plt.show()
     
-    lsf_x,lsf_y = average_filter(binx, Yhat, 20)
+    lsf_x, lsf_y = get_derivative(binx,Yhat)
+    m = max(lsf_y)
+    for i in range(len(lsf_y)):
+        lsf_y[i] = lsf_y[i]/m
+    
+    lsf_x,lsf_y = average_filter(lsf_x, lsf_y, 20)
     
     print(len(lsf_x))
     print(len(lsf_y))
@@ -722,7 +728,8 @@ def reorder():
     
     plt.scatter(mtf_x,mtf_y, marker = '.')
     plt.xlim((0,1))
-    plt.title(str(rows[0])+":"+str(rows[1])+","+str(cols[0])+':'+str(cols[1]))
+    #plt.title(str(rows[0])+":"+str(rows[1])+","+str(cols[0])+':'+str(cols[1]))
+    plt.title("bin->savgol->deriv->avg tails->FFT")
     plt.show()
     freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
     print(freq_res)
