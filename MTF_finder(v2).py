@@ -710,7 +710,7 @@ def reorder():
     plt.title("savgol")
     plt.show()
     
-    lsf_x, lsf_y = get_derivative(binx,Yhat)
+    lsf_x, lsf_y = get_derivative(binx,biny)
     m = max(lsf_y)
     for i in range(len(lsf_y)):
         lsf_y[i] = lsf_y[i]/m
@@ -726,11 +726,24 @@ def reorder():
     
     mtf_x,mtf_y = FFT(lsf_x,lsf_y)#avg_erfx, avg_erfy)
     
-    plt.scatter(mtf_x,mtf_y, marker = '.')
+    plt.plot(mtf_x,mtf_y)
     plt.xlim((0,1))
     #plt.title(str(rows[0])+":"+str(rows[1])+","+str(cols[0])+':'+str(cols[1]))
-    plt.title("bin->savgol->deriv->avg tails->FFT")
+    plt.title("bin->deriv->avg tails->FFT")
     plt.show()
     freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
     print(freq_res)
 reorder()
+
+def main():
+    #filename = input("Enter the filename in the images folder you want to analyze.\n")
+    ROI,rows,cols = open_images('image0009.bmp',roi_select=False,row0 =1200,row1 =1500,col0 =250,col1 =550)
+    #filename = input("Enter the filename of the light frame.\n")
+    light,x,y = open_images('image0009_light.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    #filename = input("Enter the filename of the dark frame.\n")
+    dark,x,y = open_images('image0008_dark.bmp', False,rows[0],rows[1],cols[0],cols[1])
+    corrected_ROI = flatfield_correction(light, dark, ROI)
+    plt.imsave("corrected_ROI.bmp", corrected_ROI, cmap = 'gray')
+
+
+#main()
