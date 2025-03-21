@@ -288,6 +288,17 @@ def flatfield_correction(light, dark, image):
     
     normalized_cor_image = corrected_image/max_light
     
+    sat_pixel_count = 0
+
+    for i in range(N):
+        for j in range(N):
+            if image[i,j] == 255:
+                sat_pixel_count +=1
+    print("Saturated Pixel Count:")
+    print(sat_pixel_count)
+    print("Saturated Pixel Percentage:")
+    print(sat_pixel_count/N**2)
+
     return normalized_cor_image
 
 """
@@ -402,6 +413,23 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
     x_intercept = r/np.cos(theta) - len(array)*0.5*np.tan(theta)
     esf_x = []
     esf_y = []
+
+    for y in range(len(array)):
+
+        x_edge = r*(np.cos(theta))**(-1) - (y)*np.tan(theta)
+        x_center= int(np.trunc(x_edge))
+
+        for i in range(-sample_number,sample_number):
+
+            x_dist =  x_center + i- x_edge
+            perp_dist = np.cos(theta)*x_dist
+
+            sample_inten = array[y, x_center+i]
+
+            esf_x.append(perp_dist)
+            esf_y.append(sample_inten)
+    return esf_x,esf_y
+'''
     for y_edge in range(0,len(array)):
         y_edge = y_edge + 0.5 #change for spacing of perp lines, aka nbr of data points
         x_edge = -y_edge*np.tan(theta)+r/np.cos(theta)
@@ -421,7 +449,8 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
                 intensity2 =  array[floor(y_sample2)][floor(x_sample2)]
                 esf_x.append(dist2-1)
                 esf_y.append(intensity2)
-    return esf_x,esf_y
+'''
+    
 
 
 def esf_bin_smooth(esf_dist,esf_intensity,binsize):
@@ -542,6 +571,30 @@ def median_filter(esfx,esfy, window_size):
     val = out_intensity[-window_size]
     out_intensity[len(out_intensity) -int(np.ceil(window_size/2)):] = [val for i in range(int(np.ceil(window_size/2)))]        
     return esfx,out_intensity
+
+def lanczos_resampling(xinput,yinput,output_len, order):
+
+    xout = np.linspace(min(xinput)+order, max(xinput)-order, output_len)
+    yout = np.zeros(output_len)
+
+    #y_pad1 = sum(yinput[:,int(0.1*len(yinput))])/int(0.1*len(yinput))
+    #x_pad1 = np.linspace()
+
+    for j in range(output_len):
+        for i in range(len(xinput)):
+            yout[j]+= yinput[i]*lanczos_kernal(xinput[i]-xout[j], order)
+
+    return xout,yout
+
+def lanczos_kernal(x,n):
+    if x == 0:
+        out = 1
+    elif np.abs(x)< n:
+        out = n*(np.sin(np.pi*x/n)*np.sin(np.pi*x))/(np.pi**2 * x**2)
+    else:
+        out = 0
+    return out
+
 
 """
 Summary:
@@ -679,46 +732,20 @@ def reorder():
     #r,theta = float(line_list[0]),float(line_list[1])
     r,theta = lines[0][1],lines[0][0]
     
-    erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 15)
-    binx,biny = esf_bin_smooth(erf_x,erf_y, .1)
-    plt.scatter(binx,biny, marker = '.')
-    plt.title("binned")
+    erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 20)
+    plt.scatter(erf_x,erf_y , marker = '.')
     plt.show()
-    '''
-    binx,biny = average_filter(binx, biny, 10)
-    plt.scatter(binx,biny, marker = '.')
-    plt.title("binned")
+
+    erf_x_resampled,erf_y_resampled = lanczos_resampling(erf_x,erf_y,1000,3)
+    plt.scatter(erf_x_resampled,erf_y_resampled, marker = '.')
     plt.show()
     
-    binx,biny = median_filter(binx, biny, 10)
-    print(len(biny))
-    print(len(binx))
-    plt.scatter(binx,biny, marker = '.')
-    plt.title("binned")
-    plt.show()
-    '''
-    Yhat = scipy.signal.savgol_filter(biny,window_length=51,polyorder = 2)
-    
-    m = max(Yhat)
-    for i in range(len(Yhat)):
-        Yhat[i] = Yhat[i]/m
-    print(len(biny))
-    print(len(Yhat))
-    print(len(binx))
-    
-    plt.scatter(binx,Yhat,marker='.')
-    plt.title("savgol")
-    plt.show()
-    
-    lsf_x, lsf_y = get_derivative(binx,biny)
+    lsf_x, lsf_y = get_derivative(erf_x_resampled,erf_y_resampled)
     m = max(lsf_y)
     for i in range(len(lsf_y)):
         lsf_y[i] = lsf_y[i]/m
     
-    lsf_x,lsf_y = average_filter(lsf_x, lsf_y, 20)
-    
-    print(len(lsf_x))
-    print(len(lsf_y))
+    #lsf_x,lsf_y = esf_bin_smooth(lsf_x, lsf_y, .05)
     
     plt.scatter(lsf_x,lsf_y,marker='.')
     plt.title('average')
