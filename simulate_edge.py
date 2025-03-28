@@ -19,12 +19,13 @@ def make_object_plane(theta, roi_height, roi_width,dark,bright):
 
     #angle that the edge is tilted w.r.t. to vertical is theta
     # x-postion which the edge starts on the top of the roi
+    m =np.tan((np.pi/180)*theta)
     edge_start = int(column/2)
     for y in range(0,row):
         for x in range(column):
-            if x < edge_start or x < edge_start-np.tan((np.pi/180)*theta)*y:
+            if x < edge_start or x < edge_start-m*y:
                 roi[y,x] = dark
-            if x>=edge_start or x >= edge_start-np.tan((np.pi/180)*theta)*y:
+            if x>=edge_start or x >= edge_start-m*y:
                 roi[y,x]  = bright
     return roi
 

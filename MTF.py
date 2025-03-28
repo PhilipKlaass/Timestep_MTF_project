@@ -370,6 +370,7 @@ def hough_transform(array, threshold1, plot):
         lines.append((angle,dist,dist/np.cos(angle)))
         if plot==True:
             plt.imshow(array)
+            plt.gca().invert_yaxis()
             plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
             plt.show()
     print("Lines:\n")
@@ -380,7 +381,7 @@ def hough_transform(array, threshold1, plot):
 
 
 
-def get_esf(array, theta, r, sampling_frequency, sample_number):
+def get_esf(array, theta, r, sample_number):
     '''
 
     Parameters
@@ -408,8 +409,7 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
         DESCRIPTION.
 
     '''
-    theta = theta #change sign because the array indexes downwards and the math
-                   #is easier when we consider our edge in the 1st quadrant
+    
     x_intercept = r/np.cos(theta) - len(array)*0.5*np.tan(theta)
     esf_x = []
     esf_y = []
@@ -418,22 +418,33 @@ def get_esf(array, theta, r, sampling_frequency, sample_number):
 
         x_edge = r*(np.cos(theta))**(-1) - (y)*np.tan(theta)
         x_center= int(np.trunc(x_edge))
+        
+        if sample_number == "total":
+            for i in range(0,len(array[0])-1):
+                x_dist =  i- x_edge
+                perp_dist = np.cos(theta)*x_dist
 
-        for i in range(-sample_number,sample_number):
+                sample_inten = array[y, i]
 
-            x_dist =  x_center + i- x_edge
-            perp_dist = np.cos(theta)*x_dist
-
-            sample_inten = array[y, x_center+i]
-
-            esf_x.append(perp_dist)
-            esf_y.append(sample_inten)
+                esf_x.append(perp_dist)
+                esf_y.append(sample_inten)
+        else:
+            for i in range(-sample_number,sample_number):
+    
+                x_dist =  x_center + i- x_edge
+                perp_dist = np.cos(theta)*x_dist
+    
+                sample_inten = array[y, x_center+i]
+    
+                esf_x.append(perp_dist)
+                esf_y.append(sample_inten)
     return esf_x,esf_y
 '''
     for y_edge in range(0,len(array)):
         y_edge = y_edge + 0.5 #change for spacing of perp lines, aka nbr of data points
         x_edge = -y_edge*np.tan(theta)+r/np.cos(theta)
         for i in range(sample_number):
+
             x_sample1 = x_intercept + i/sampling_frequency 
             x_sample2 = x_intercept - i/sampling_frequency
             y_sample1 = np.tan(theta)*(x_sample1-x_edge)+y_edge
@@ -572,18 +583,45 @@ def median_filter(esfx,esfy, window_size):
     out_intensity[len(out_intensity) -int(np.ceil(window_size/2)):] = [val for i in range(int(np.ceil(window_size/2)))]        
     return esfx,out_intensity
 
-def lanczos_resampling(xinput,yinput,output_len, order):
-
-    xout = np.linspace(min(xinput)+order, max(xinput)-order, output_len)
-    yout = np.zeros(output_len)
-
-    #y_pad1 = sum(yinput[:,int(0.1*len(yinput))])/int(0.1*len(yinput))
-    #x_pad1 = np.linspace()
-
-    for j in range(output_len):
+def lanczos_resampling(xinput,yinput, order):
+    
+    resampled_freq = 0.25 #cycles/pixel as specified in ISO 22333
+    resample_number = int((max(xinput)-min(xinput))/resampled_freq)
+    sample_number = len(xinput)
+    
+    xout = np.linspace(min(xinput), max(xinput), resample_number)
+    yout = np.zeros(resample_number)
+    
+    A = np.zeros((len(xinput),2))
+    A[:,0] = xinput
+    A[:,1] = yinput
+    
+    xmin = min(xinput)
+    xmax = max(xinput)
+    
+    B = A[A[:,0].argsort()]
+    
+    xinput = B[:,0]
+    yinput = B[:,1]
+    
+    xinput_new = np.insert(xinput,0,xinput-(xmax-xmin))
+    yinput_new = np.insert(yinput,0,yinput[::-1])
+    #yinput_new = np.insert(yinput,0,np.zeros(sample_number))
+    
+    xinput = np.insert(xinput_new,len(xinput_new),xinput+(xmax-xmin))
+    yinput = np.insert(yinput_new,len(yinput_new),yinput[::-1])
+    #yinput = np.insert(yinput_new,len(yinput_new),np.zeros(sample_number))
+    
+    for j in range(resample_number):
+        
+        w = 0
         for i in range(len(xinput)):
-            yout[j]+= yinput[i]*lanczos_kernal(xinput[i]-xout[j], order)
-
+                
+            if xinput[i]>xout[j]-order and xinput[i]<xout[j]+order: 
+                yout[j]+= yinput[i]*lanczos_kernal(xinput[i]-xout[j], order)
+                w += lanczos_kernal(xinput[i]-xout[j], order)
+                
+        yout[j]  = yout[j]/w
     return xout,yout
 
 def lanczos_kernal(x,n):
@@ -721,6 +759,7 @@ def reorder():
     corrected_ROI = flatfield_correction(light, dark, ROI)
     plt.imshow(corrected_ROI)
     plt.colorbar()
+    plt.gca().invert_yaxis()
     plt.show()
     
     threshold = len(ROI[0])*0.75
@@ -732,7 +771,7 @@ def reorder():
     #r,theta = float(line_list[0]),float(line_list[1])
     r,theta = lines[0][1],lines[0][0]
     
-    erf_x,erf_y = get_esf(corrected_ROI, theta, r,0.9, 20)
+    erf_x,erf_y = get_esf(corrected_ROI, theta, r, 100)
     plt.scatter(erf_x,erf_y , marker = '.')
     plt.show()
 
@@ -756,11 +795,11 @@ def reorder():
     plt.plot(mtf_x,mtf_y)
     plt.xlim((0,1))
     #plt.title(str(rows[0])+":"+str(rows[1])+","+str(cols[0])+':'+str(cols[1]))
-    plt.title("bin->deriv->avg tails->FFT")
+    plt.title("resample->deriv->FFT")
     plt.show()
     freq_res  = (mtf_x[-1]-mtf_x[0])/len(mtf_x)
     print(freq_res)
-reorder()
+#reorder()
 
 def main():
     #filename = input("Enter the filename in the images folder you want to analyze.\n")
