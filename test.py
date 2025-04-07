@@ -10,7 +10,6 @@ import numpy as np
 import simulate_edge
 import ISO
 import matplotlib.pyplot as plt
-import matplotlib
 
 
 a = np.linspace(-10,10, 1000)
@@ -27,7 +26,7 @@ A = simulate_edge.make_object_plane(16, 1000, 1000, 15,200)
 
 B = simulate_edge.make_image_plane(A, N)
 
-normal = simulate_edge.make_kernal(0.5, 0.5, 3)
+normal = simulate_edge.make_kernal(1,1, 3)
 
 dark = np.zeros((N,N))
 light = np.ones((N,N))
@@ -83,7 +82,7 @@ erf_x,erf_y = MTF.get_esf(CC, theta, r, "total")
 plt.scatter(erf_x, erf_y)
 plt.show()
 
-erf_x_resampled,erf_y_resampled = MTF.lanczos_resampling(erf_x,erf_y,3)
+erf_x_resampled,erf_y_resampled = MTF.lanczos_resampling(erf_x,erf_y,4)
 
 plt.scatter(erf_x_resampled,erf_y_resampled)
 plt.show()
