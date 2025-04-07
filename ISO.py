@@ -54,4 +54,33 @@ def calc_slope(array):
         
     return 2*centroid_sum/m
 
-#def shift()
+def get_esf(ROI, m):
+    
+    X = len(ROI[0])
+    
+    ESF = np.zeros(int(4*X))
+    
+    for i in range(4*X):
+        
+        S = 0
+        count = 0
+        
+        for j in range(X):
+            shift = j/m
+            for k in range(X):
+                
+                if -.125<=k-shift-j<=0.125:
+                    
+                    S += ROI[j,k]
+                    count+=1
+                    
+        ESF[i] = S/count
+        
+    return ESF
+                
+                
+                
+                
+                
+                
+            

@@ -438,6 +438,8 @@ def get_esf(array, theta, r, sample_number):
     
                 esf_x.append(perp_dist)
                 esf_y.append(sample_inten)
+                
+                
     return esf_x,esf_y
 '''
     for y_edge in range(0,len(array)):
@@ -464,7 +466,7 @@ def get_esf(array, theta, r, sample_number):
     
 
 
-def esf_bin_smooth(esf_dist,esf_intensity,binsize):
+def bin_esf(esf_dist,esf_intensity,binsize):
     '''
     
 
@@ -502,6 +504,8 @@ def esf_bin_smooth(esf_dist,esf_intensity,binsize):
         if k!= 0:
             binned_esfx.append(minimum_dist+i*binsize)
             binned_esfy.append(tot_intensity/k)
+        else:
+            print("Error in bin_esf \n no counts")
 
     return binned_esfx,binned_esfy
 
@@ -587,7 +591,6 @@ def lanczos_resampling(xinput,yinput, order):
     
     resampled_freq = 0.25 #cycles/pixel as specified in ISO 22333
     resample_number = int((max(xinput)-min(xinput))/resampled_freq)
-    sample_number = len(xinput)
     
     xout = np.linspace(min(xinput), max(xinput), resample_number)
     yout = np.zeros(resample_number)
@@ -633,24 +636,40 @@ def lanczos_kernal(x,n):
         out = 0
     return out
 
-
 """
 Summary:
     Uses a 2-point kernel to approximate the derivative of a 1-D function via convolution.
     Kernel is (-1,1)
 """
-def get_derivative(x,y):
-    x_out=x
+def get_lsf(x,y, clip):
+    X = len(y)
+    x_out = np.array(x)
+    y_out = np.zeros(X)
     for i in range(1,len(x)-1):
-        y[i] = y[i+1]-y[i]
-    y_out = y
-    y_out = np.delete(y_out,0)
-    x_out = np.delete(x_out,0)
-    y_out = np.delete(y_out,len(y_out)-1)
-    x_out = np.delete(x_out,len(x_out)-1)
-    minten = max(y_out)
-    for i in range(len(y_out)):
-        y_out[i]=y_out[i]/minten
+        temp = (0.54+0.46*np.cos(2*np.pi*(i-2*X)/(4*X)))*(y[i+1]-y[i-1])
+        y_out[i] = temp/(x[i+1]-x[i-1])
+    y_out[-1] = y_out[-2]
+    y_out[0] = y_out[1]
+    
+    if clip==1:
+        min_x = min(x_out)
+        max_x = max(x_out)
+        
+        if np.abs(min_x)>np.abs(max_x):
+            
+            indic_to_del = np.where(np.abs(x)>max_x)
+            
+            np.delete(x_out,indic_to_del)
+            np.delete(y_out,indic_to_del)
+                    
+        if np.abs(min_x)<np.abs(max_x):
+            
+            indic_to_del = np.where(np.abs(x)>-min_x)[0]
+            
+            x_out = np.delete(x_out,indic_to_del)
+            y_out = np.delete(y_out,indic_to_del)
+    
+    
     return x_out,y_out
 
 
@@ -666,17 +685,13 @@ Variables:
     - pixel_size: in microns, needed to convert to real frequencies
 """
 def FFT(lsf_dist,lsf_inten):
+    
     N= len(lsf_inten)
     n = np.arange(N)
-    k = n.reshape((N,1))
-    e = np.exp(-2j*2*np.pi*k*(n/N)) #NxN array with columns of exp(-2j*pi*kn/N)
-    X= np.dot(e,lsf_inten)  #matrix multiplication, FFT
     X1 = scipy.fft.fft(lsf_inten)
     X =np.abs(X1) #modulus of the FFT
-
-    m = max(X)
-    for i in range(len(X)):
-        X[i]= X[i]/m
+    
+    X = X/X[0]
 
     R = (max(lsf_dist)-min(lsf_dist))#range in units of pixels
     sr = N/(R) #sampling rate
