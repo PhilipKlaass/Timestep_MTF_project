@@ -54,7 +54,7 @@ A = simulate_edge.make_object_plane(16, 1000, 1000, 15,200)
 
 B = simulate_edge.make_image_plane(A, N)
 
-normal = simulate_edge.make_kernal(1,1, 3)
+normal = simulate_edge.make_kernal(0.5, 0.5, 3)
 
 
 C = simulate_edge.convolve(normal,B)
@@ -125,13 +125,9 @@ fig = plt.figure()
 plt.scatter(erf_x, erf_y)
 plt.show()
 
-<<<<<<< HEAD
-erf_x_resampled,erf_y_resampled = MTF.lanczos_resampling(erf_x,erf_y,4)
-=======
 #erf_x_resampled,erf_y_resampled = MTF.lanczos_resampling(erf_x,erf_y,3)
 #erf_x_resampled,erf_y_resampled = MTF.bin_esf(erf_x,erf_y,0.25)
 erf_x_resampled,erf_y_resampled = MTF.bin_esf(erf_x,erf_y,0.25)
->>>>>>> origin/master
 
 #esf = ISO.get_esf(CC, m)
 #fig = plt.figure()
@@ -175,5 +171,5 @@ plt.xlim((0,1))
 plt.title("MTF")
 plt.xlabel("Spatial Frequency (per pixel)")
 plt.legend()
-plt.savefig('MTF_compare', dpi = 400)
+plt.savefig('MTF_compare', dpi=400)
 plt.show()
