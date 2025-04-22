@@ -58,7 +58,7 @@ def get_esf(ROI, m):
     
     X = len(ROI[0])
     
-    ESF = np.zeros(int(4*X))
+    ESFy = np.zeros(int(4*X))
     
     for i in range(4*X):
         
@@ -74,9 +74,9 @@ def get_esf(ROI, m):
                     S += ROI[j,k]
                     count+=1
                     
-        ESF[i] = S/count
+        ESFy[i] = S/count
         
-    return ESF
+    return ESFy
                 
                 
                 
