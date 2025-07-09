@@ -68,15 +68,17 @@ light = light + np.ones((N,N))*235
 '''
 CC = MTF.flatfield_correction(light, dark, image)
 
+counts = np.reshape(image,m*n)
+
+plt.hist(counts,255)
+plt.show()
 
 CC = CC[600:800,950:1150]
 plt.imshow(CC)
 plt.colorbar()
-plt.plot()
 plt.show()
 
 N = 200
-
 
 from PIL import Image
 
@@ -122,7 +124,7 @@ erf_x,erf_y = MTF.get_esf(CC*255, theta, r, "total")
 #erf_x = np.linspace(-50, 50,400)
 
 fig = plt.figure()
-plt.scatter(erf_x, erf_y)
+plt.scatter(erf_x, erf_y, marker="o",alpha = 0.5)
 plt.show()
 
 #erf_x_resampled,erf_y_resampled = MTF.lanczos_resampling(erf_x,erf_y,3)
@@ -135,8 +137,15 @@ erf_x_resampled,erf_y_resampled = MTF.bin_esf(erf_x,erf_y,0.25)
 #plt.show()
 
 
-fig = plt.figure()
-plt.scatter(erf_x_resampled,erf_y_resampled)
+fig,axes = plt.subplots()
+plt.scatter(erf_x_resampled,erf_y_resampled,marker="o",alpha = 0.25,color = "b")
+plt.tick_params(axis = 'both', direction = 'in',zorder = 0.5)
+plt.ylim((-5,255))
+axes.set_aspect(0.7)
+plt.ylabel("Pixel Output Level")
+plt.xlabel("Orthoganal Distance from Edge")
+plt.title("ERF")
+plt.savefig('ERF Sample.png',dpi = 500,bbox_inches='tight')
 plt.show()
 
 lsf_x, lsf_y = MTF.get_lsf(erf_x_resampled,erf_y_resampled,1)

@@ -366,14 +366,13 @@ def hough_transform(array, threshold1, plot):
     lines = []
     for _, angle, dist in zip(*hough_line_peaks(h, theta, d, threshold = threshold1)):
         (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
-        ##plt.plot((x0, y0), slope=np.tan(angle + np.pi/2))
         lines.append((angle,dist,dist/np.cos(angle)))
         if plot==True:
             plt.imshow(array)
             plt.gca().invert_yaxis()
             plt.axline((x0, y0), slope=np.tan(angle + np.pi/2))
             plt.show()
-    print("Lines:\n")
+    print("Lines above threshold:\n")
     for i in range(len(lines)):
         print(lines[i])
     return lines
@@ -439,8 +438,26 @@ def get_esf(array, theta, r, sample_number):
                 esf_x.append(perp_dist)
                 esf_y.append(sample_inten)
                 
-                
-    return esf_x,esf_y
+    if sample_number=='total':
+        min_x = min(esf_x)
+        max_x = max(esf_x)
+        
+        if np.abs(min_x)>np.abs(max_x):
+            
+            indic_to_del = np.where(np.abs(esf_x)>max_x)
+            
+            x_out = np.delete(esf_x,indic_to_del)
+            y_out = np.delete(esf_y,indic_to_del)
+                    
+        if np.abs(min_x)<np.abs(max_x):
+            
+            indic_to_del = np.where(np.abs(esf_x)>-min_x)[0]
+            
+            x_out = np.delete(esf_x,indic_to_del)
+            y_out = np.delete(esf_y,indic_to_del)
+    
+    
+    return x_out,y_out
 '''
     for y_edge in range(0,len(array)):
         y_edge = y_edge + 0.5 #change for spacing of perp lines, aka nbr of data points
@@ -646,28 +663,10 @@ def get_lsf(x,y, clip):
     x_out = np.array(x)
     y_out = np.zeros(X)
     for i in range(1,len(x)-1):
-        temp = (0.54+0.46*np.cos(2*np.pi*(i-2*X)/(4*X)))*(y[i+1]-y[i-1])
+        temp = (0.54+0.46*np.cos(2*np.pi*(i-2*X)/(4*X)))*(y[i+1]-y[i-1])/2
         y_out[i] = temp/(x[i+1]-x[i-1])
     y_out[-1] = y_out[-2]
     y_out[0] = y_out[1]
-    
-    if clip==1:
-        min_x = min(x_out)
-        max_x = max(x_out)
-        
-        if np.abs(min_x)>np.abs(max_x):
-            
-            indic_to_del = np.where(np.abs(x)>max_x)
-            
-            np.delete(x_out,indic_to_del)
-            np.delete(y_out,indic_to_del)
-                    
-        if np.abs(min_x)<np.abs(max_x):
-            
-            indic_to_del = np.where(np.abs(x)>-min_x)[0]
-            
-            x_out = np.delete(x_out,indic_to_del)
-            y_out = np.delete(y_out,indic_to_del)
     
     
     return x_out,y_out
