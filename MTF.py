@@ -277,6 +277,21 @@ def function(a,freq):
 ROI selection -----------------------------------------------------------------------------------------------------
 
 """
+def bad_pixels(image):
+    m,n = image.shape
+    sat_pixel_count = 0
+    empty_pixel_count = 0
+
+    for i in range(m):
+        for j in range(n):
+            if image[i,j] == 255:
+                sat_pixel_count +=1
+            if image[i,j] == 0:
+                    empty_pixel_count +=1
+    print("Saturated Pixel Count:")
+    print(sat_pixel_count)
+    print("Empty Pixel Count:")
+    print(empty_pixel_count)
 
 def flatfield_correction(light, dark, image):
     
@@ -287,17 +302,7 @@ def flatfield_correction(light, dark, image):
     max_light = np.array(corrected_image).max()
     
     normalized_cor_image = corrected_image/max_light
-    
-    sat_pixel_count = 0
 
-    for i in range(N):
-        for j in range(N):
-            if image[i,j] == 255:
-                sat_pixel_count +=1
-    print("Saturated Pixel Count:")
-    print(sat_pixel_count)
-    print("Saturated Pixel Percentage:")
-    print(sat_pixel_count/N**2)
 
     return normalized_cor_image
 
@@ -324,10 +329,12 @@ def detect_edge_points(array, threshold):
         Binary array with edgepoints set to a value of 1.
 
     '''
+    
+    m,n= array.shape
     light_value = np.array(array).max()
     edge_points = np.zeros((len(array),len(array[0])))
-    for j in range(len(array)):
-        for i in range(len(array)-1,0,-1):
+    for j in range(m):
+        for i in range(n-1,0,-1):
             if np.sum(edge_points[j])<5: #added to incase bright points after 
                                          #edge are present  
                 if (0.5-threshold)*light_value <=  array[j][i]<= (0.5+threshold)*light_value:
@@ -416,17 +423,18 @@ def get_esf(array, theta, r, sample_number):
     for y in range(len(array)):
 
         x_edge = r*(np.cos(theta))**(-1) - (y)*np.tan(theta)
-        x_center= int(np.trunc(x_edge))
+        x_center= int(np.trunc(x_edge)) +0.5
         
         if sample_number == "total":
             for i in range(0,len(array[0])-1):
-                x_dist =  i- x_edge
-                perp_dist = np.cos(theta)*x_dist
-
-                sample_inten = array[y, i]
-
-                esf_x.append(perp_dist)
-                esf_y.append(sample_inten)
+                if array[y,i]!= 255 and array[y,i]!= 0:
+                    x_dist =  i- x_edge
+                    perp_dist = np.cos(theta)*x_dist
+    
+                    sample_inten = array[y, i]
+    
+                    esf_x.append(perp_dist)
+                    esf_y.append(sample_inten)
         else:
             for i in range(-sample_number,sample_number):
     
@@ -573,19 +581,6 @@ def average_filter(esfx,esfy,window_size):
     val = y[-step]
     y[len(y) -int(np.ceil(step/2)):] = [val for i in range(int(np.ceil(step/2)))]
         
-    '''    
-    for i in range(0,len(esfy), step):
-        to_average = []
-        avg_dist = 0
-        avg_inten = 0
-        for j in range(len(esfy)):
-            if esfy[i]-window_size/2<esfy[j]<esfy[i]+window_size/2:
-                avg_dist+=esfx[j]
-                avg_inten +=esfy[j]
-        med_esfx.append(avg_dist/len(to_average))
-        med_esfy.append(avg_inten/len(to_average))
-        out.append((avg_dist/len(to_average),avg_inten/len(to_average)))
-    '''
     return esfx,y
 
 def median_filter(esfx,esfy, window_size):
