@@ -48,4 +48,4 @@ This basic flow chart is coded in the intro() function.
 
 ## Simulated MTFs
 
-Edeg images can be simulated with a gaussian blur in the simulate_edge file.
+Edeg images can be simulated with a gaussian PSF (whose parameters may be adjusted) in the simulate_edge file.
